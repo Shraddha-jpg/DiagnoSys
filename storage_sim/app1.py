@@ -20,10 +20,11 @@ def find_available_port(start=5000, max_instances=50):
                 return port
     raise RuntimeError("No available ports found!")'
 '''
+
 def find_available_port():
     return int(os.getenv("FLASK_PORT", 5000))  # Default to 5000, override with FLASK_PORT
 
-PORT = find_available_port()
+PORT = find_available_port() 
 
 # Unique data directory for this instance
 DATA_DIR = f"data_instance_{PORT}"
@@ -91,13 +92,25 @@ def update_system():
 def delete_system():
     exists, system, status = ensure_system_exists()
     if not exists:
-        return system, status
-    
+        return system, status  # System does not exist, return error
+
     try:
-        storage_mgr.delete_resource("system", None)
-        return "", 204
+        system_id = system["id"]
+        
+        # Remove all related data
+        storage_mgr.delete_related_resources("node", system_id)
+        storage_mgr.delete_related_resources("volume", system_id)
+        storage_mgr.delete_related_resources("settings", system_id)
+
+        # Delete the system itself
+        storage_mgr.delete_resource("system", None)  # Delete system locally
+        storage_mgr.remove_system_from_global(system_id)  # Delete from global tracking
+
+        return jsonify({"message": "System and all related data deleted successfully"}), 204
+
     except Exception as e:
         return jsonify({"error": f"Failed to delete system: {str(e)}"}), 500
+
 
 # --- Node Routes ---
 @app.route('/node', methods=['POST'])
