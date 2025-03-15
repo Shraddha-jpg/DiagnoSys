@@ -7,9 +7,8 @@ from storage1 import StorageManager
 
 app = Flask(__name__)
 
-# Configuration for multi-instance simulation
-GLOBAL_FILE = "global_systems.json"  # Tracks all instances
-ENABLE_UI = True  # Enable UI serving
+GLOBAL_FILE = "global_systems.json" 
+ENABLE_UI = True 
 
 # Automatically find the next available port (5000+)
 '''
@@ -22,17 +21,16 @@ def find_available_port(start=5000, max_instances=50):
 '''
 
 def find_available_port():
-    return int(os.getenv("FLASK_PORT", 5000))  # Default to 5000, override with FLASK_PORT
+    return int(os.getenv("FLASK_PORT", 5000))
 
 PORT = find_available_port() 
 
-# Unique data directory for this instance
 DATA_DIR = f"data_instance_{PORT}"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # Initialize storage manager for this instance
 storage_mgr = StorageManager(DATA_DIR, GLOBAL_FILE)
-# Helper to check if a system exists (guard rail)
+
 def ensure_system_exists():
     systems = storage_mgr.load_resource("system")
     if not systems:
@@ -340,7 +338,7 @@ def get_raw_json(resource_type):
         return jsonify({"error": "Invalid resource type."}), 400
     file_path = os.path.join(DATA_DIR, f"{resource_type}.json")
     if not os.path.exists(file_path):
-        return jsonify([]), 200  # Return empty array if file doesn’t exist
+        return jsonify([]), 200
     return send_file(file_path, mimetype='application/json')
 
 # --- Plug-and-Play UI ---
