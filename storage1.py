@@ -1,4 +1,3 @@
-
 import json
 import os
 import uuid
@@ -6,16 +5,48 @@ import threading
 import time
 import random
 from datetime import datetime
+import requests
 
 class StorageManager:
-    def __init__(self, data_dir, global_file="global_systems.json"):
+    def __init__(self, data_dir, global_file="global_systems.json", logger=None):
         self.data_dir = data_dir
         self.global_file = global_file
+        self.logger = logger
+        self.metrics_file = os.path.join(data_dir, f"system_metrics_{self.get_port()}.json")
+        self.replication_metrics_file = os.path.join(data_dir, f"replication_metrics_{self.get_port()}.json")
         os.makedirs(data_dir, exist_ok=True)
 
         if not os.path.exists(self.global_file) or os.stat(self.global_file).st_size == 0:
             with open(self.global_file, "w") as f:
                 json.dump([], f, indent=4)
+
+        # Initialize metrics files if they don't exist
+        if not os.path.exists(self.metrics_file):
+            self.save_metrics({"throughput_used": 0, "capacity_used": 0})
+        if not os.path.exists(self.replication_metrics_file):
+            self.save_replication_metrics({})
+
+        # Dictionary to keep track of ongoing replication tasks (one per volume)
+        self.replication_tasks = {}
+
+    def get_port(self):
+        return self.data_dir.split('_')[-1]
+
+    def save_metrics(self, metrics):
+        with open(self.metrics_file, 'w') as f:
+            json.dump(metrics, f, indent=4)
+
+    def load_metrics(self):
+        if not os.path.exists(self.metrics_file):
+            return {"throughput_used": 0, "capacity_used": 0}
+        with open(self.metrics_file, 'r') as f:
+            return json.load(f)
+
+    def update_capacity_used(self, size_gb):
+        metrics = self.load_metrics()
+        metrics["capacity_used"] += size_gb
+        self.save_metrics(metrics)
+        return metrics["capacity_used"]
 
     def load_resource(self, resource_type):
         file_path = os.path.join(self.data_dir, f"{resource_type}.json")
@@ -206,7 +237,7 @@ class StorageManager:
             raise ValueError("Invalid volume or host ID")
 
         # Check if volume is already exported
-        if volume.get("is_exported", False):
+        if volume.get("is_exported"):
             raise ValueError("Volume is already exported")
 
         # Mark volume as exported
@@ -219,98 +250,304 @@ class StorageManager:
         # Use update_resource() instead of save_resource()
         self.update_resource("volume", volume_id, volume)  # Updates only this volume
 
-        # Start background tasks (run host IO, snapshots, replication)
+        # Start background tasks: host I/O, snapshots, and replication.
         self.start_host_io(volume_id)
         if volume.get("snapshot_settings"):
             self.start_snapshot(volume_id)
+        # If replication settings exist, start replication for this volume.
         if volume.get("replication_settings"):
             self.start_replication(volume_id)
 
         return f"Volume {volume_id} exported successfully to Host {host_id}"
 
-    import threading
-    import time
-    import random
-    from datetime import datetime
-
     def start_host_io(self, volume_id):
-        """Simulate I/O operations for a volume and log data separately every 5 seconds."""
-        print(f"Host I/O started for volume {volume_id}")  # Debug log
+        """Simulate I/O operations for a volume using logger"""
+        print(f"Host I/O started for volume {volume_id}")
 
         def io_worker():
             try:
                 while True:
-                    print(f"Writing I/O metrics for volume {volume_id}")  # Debug log
-
                     volumes = self.load_resource("volume")
                     volume = next((v for v in volumes if v["id"] == volume_id), None)
 
                     if not volume or not volume.get("is_exported", False):
-                        print(f"Stopping Host I/O for volume {volume_id}")  # Debug log
-                        break  # Stop if volume is unexported
+                        break
 
                     host_id = volume.get("exported_host_id", "Unknown")
-
                     io_count = random.randint(100, 1000)
                     latency = round(random.uniform(1.0, 10.0), 2)
                     throughput = round(io_count / latency, 2)
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                    io_log_entry = f"[{timestamp}] Volume: {volume_id}, Host: {host_id}, IOPS: {io_count}, Latency: {latency}ms, Throughput: {throughput} MB/s\n"
-                    io_log_path = os.path.join(self.data_dir, "io_log.txt")
-                    with open(io_log_path, "a") as log_file:
-                        log_file.write(io_log_entry)
+                    # Log using the logger (both local and global)
+                    log_message = (
+                        f"Volume: {volume_id}, Host: {host_id}, "
+                        f"IOPS: {io_count}, Latency: {latency}ms, Throughput: {throughput} MB/s"
+                    )
+                    if self.logger:
+                        self.logger.info(log_message, global_log=True)
 
-                    print(f"Logged to io_log.txt for volume {volume_id}")  # Debug log
-
-                    metrics = self.load_resource("metrics")
+                    # Update metrics (renamed to io_metrics)
+                    metrics = self.load_resource("io_metrics")
                     if not isinstance(metrics, list):  
-                        print("Warning: metrics.json is not a list, resetting to an empty list.")
-                        metrics = []  # Reset to an empty list
+                        metrics = []
 
                     metrics.append({
-                        "timestamp": timestamp,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         "volume_id": volume_id,
                         "host_id": host_id,
                         "io_count": io_count,
                         "latency": latency,
                         "throughput": throughput
                     })
-                    self.save_resource("metrics", metrics)
+                    self.save_resource("io_metrics", metrics)
 
-                    print(f"Metrics updated for volume {volume_id}")  # Debug log
-
-                    time.sleep(30)  # Log every 5 seconds
+                    time.sleep(30)
             except Exception as e:
-                import traceback
-                print(f"ERROR in start_host_io(): {traceback.format_exc()}")  # Print full error traceback
+                if self.logger:
+                    self.logger.error(f"Host I/O error: {str(e)}", global_log=True)
 
-        # Move thread creation OUTSIDE the loop
         worker_thread = threading.Thread(target=io_worker, daemon=True)
         worker_thread.start()
 
-        print(f"Background thread started for volume {volume_id}")  # Debug log
-    
-    def unexport_volume(self, volume_id):
+    def unexport_volume(self, volume_id, reason="Manual unexport"):
+        """
+        Unexport a volume and cleanup all associated processes
+        """
         volumes = self.load_resource("volume")
         volume = next((v for v in volumes if v["id"] == volume_id), None)
         if not volume:
             raise ValueError("Invalid volume ID")
         if not volume.get("is_exported", False):
             raise ValueError("Volume is not exported")
+
+        # First cleanup all processes
+        self.cleanup_volume_processes(volume_id, reason=reason)
+
+        # Then update volume state
         volume["is_exported"] = False
         volume["exported_host_id"] = None
         volume["workload_size"] = None
-        print(f"📢 Unexporting volume {volume_id}")
+
+        self.logger.info(f"Volume {volume_id} unexported: {reason}", global_log=True)
         self.update_resource("volume", volume_id, volume)
-        print(f"✅ Volume {volume_id} unexported successfully")
         return f"Volume {volume_id} unexported successfully"
 
+    def start_replication(self, volume_id):
+        """
+        Starts a replication process for the given volume_id if replication settings exist.
+        """
+        # If a replication task for this volume is already running, do nothing.
+        if volume_id in self.replication_tasks:
+            return
 
+        # Create an Event to signal termination of the replication thread.
+        stop_event = threading.Event()
+        self.replication_tasks[volume_id] = stop_event
 
+        # Start main replication coordinator thread
+        thread = threading.Thread(target=self.replication_coordinator, args=(volume_id, stop_event), daemon=True)
+        thread.start()
 
+    def replication_coordinator(self, volume_id, stop_event):
+        """
+        Coordinates replication to multiple targets, spawning a worker thread for each target.
+        """
+        worker_threads = {}  # Keep track of worker threads by target_id
 
+        while not stop_event.is_set():
+            # Reload volume to check current state
+            volumes = self.load_resource("volume")
+            volume = next((v for v in volumes if v["id"] == volume_id), None)
 
+            if not volume or not volume.get("is_exported") or not volume.get("replication_settings"):
+                break
+
+            # Get current replication settings
+            current_settings = volume.get("replication_settings", [])
+            current_target_ids = {s.get("replication_target", {}).get("id") for s in current_settings 
+                                if s.get("replication_target", {}).get("id") is not None}
+
+            # Stop threads for removed targets
+            for target_id in list(worker_threads.keys()):
+                if target_id not in current_target_ids:
+                    worker_threads[target_id]["stop_event"].set()
+                    worker_threads[target_id]["thread"].join(timeout=1)
+                    del worker_threads[target_id]
+
+            # Start new threads for new targets
+            for rep_setting in current_settings:
+                target_id = rep_setting.get("replication_target", {}).get("id")
+                if target_id is not None and target_id not in worker_threads:
+                    target_stop_event = threading.Event()
+                    worker_thread = threading.Thread(
+                        target=self.replication_worker,
+                        args=(volume_id, target_stop_event, rep_setting),
+                        daemon=True
+                    )
+                    worker_threads[target_id] = {
+                        "thread": worker_thread,
+                        "stop_event": target_stop_event
+                    }
+                    worker_thread.start()
+
+            time.sleep(5)  # Check for changes every 5 seconds
+
+        # Clean up all worker threads
+        for worker in worker_threads.values():
+            worker["stop_event"].set()
+            worker["thread"].join(timeout=1)
+
+        if volume_id in self.replication_tasks:
+            del self.replication_tasks[volume_id]
+
+    def replication_worker(self, volume_id, stop_event, rep_setting):
+        """
+        Worker function that simulates replication of a volume to a specific target.
+        """
+        replication_type = rep_setting.get("replication_type")
+        target = rep_setting.get("replication_target", {})
+        target_id = target.get("id")
+        last_log_time = 0
+        SYNC_LOG_INTERVAL = 200  # Log every 200 seconds for sync replication
+
+        # Log replication start
+        start_log = (f"Started {replication_type} replication for volume {volume_id} "
+                     f"to target {target.get('name')}")
+        self.logger.info(start_log, global_log=True)
+
+        while not stop_event.is_set():
+            # Reload volumes to check current state.
+            volumes = self.load_resource("volume")
+            volume = next((v for v in volumes if v["id"] == volume_id), None)
+            if not volume or not volume.get("is_exported"):
+                break
+
+            delay_sec = rep_setting.get("delay_sec", 0)
+            
+            # Simulate replication throughput calculation.
+            io_count = random.randint(50, 500)
+            latency = round(random.uniform(1.0, 5.0), 2)
+            replication_throughput = round(io_count / latency, 2)  # MB/s
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Update replication metrics
+            metrics = {
+                "throughput": replication_throughput,
+                "latency": latency,
+                "io_count": io_count,
+                "replication_type": replication_type,
+                "timestamp": timestamp
+            }
+            self.update_replication_metrics(volume_id, target_id, metrics)
+
+            current_time = time.time()
+            should_log = (
+                replication_type != "synchronous" or  # Always log async
+                last_log_time == 0 or  # First log
+                (current_time - last_log_time) >= SYNC_LOG_INTERVAL  # Periodic sync log
+            )
+
+            if should_log:
+                # Log sender replication event.
+                if replication_type == "synchronous":
+                    sender_log = (f"Active synchronous replication for volume {volume_id} "
+                                f"to target {target.get('name')} - "
+                                f"Throughput: {replication_throughput} MB/s, Latency: {latency}ms")
+                else:
+                    sender_log = (f"Replicating volume {volume_id} with throughput "
+                                f"{replication_throughput} MB/s to target {target.get('name')}")
+                if self.logger:
+                    self.logger.info(sender_log, global_log=True)
+                last_log_time = current_time
+
+            # Determine target endpoint by looking up the target system in global systems.
+            try:
+                global_systems = self.get_all_systems()
+                target_sys = next((s for s in global_systems if s["id"] == target_id), None)
+                if target_sys:
+                    target_port = target_sys["port"]
+                    target_url = f"http://localhost:{target_port}/replication-receive"
+                    payload = {
+                        "volume_id": volume_id,
+                        "replication_throughput": replication_throughput,
+                        "sender": self.data_dir,
+                        "timestamp": timestamp,
+                        "replication_type": replication_type,
+                        "should_log": should_log,  # Tell target whether to log
+                        "latency": latency
+                    }
+                    response = requests.post(target_url, json=payload, timeout=5)
+                    if response.status_code != 200:
+                        self.logger.warn(f"Failed to deliver replication data to target {target.get('name')}: {response.text}", global_log=True)
+                else:
+                    self.logger.warn(f"Target system with id {target_id} not found", global_log=True)
+            except Exception as ex:
+                self.logger.error(f"Replication error for volume {volume_id}: {str(ex)}", global_log=True)
+
+            # Wait based on replication type and delay setting
+            wait_time = delay_sec if replication_type == "asynchronous" and delay_sec > 0 else 10
+            time.sleep(wait_time)
+
+        # Log replication stop
+        stop_log = f"Stopped {replication_type} replication for volume {volume_id} to target {target.get('name')}"
+        self.logger.info(stop_log, global_log=True)
+
+    def cleanup_volume_processes(self, volume_id, reason="", notify_targets=True):
+        """
+        Cleanup all processes for a volume and notify targets if needed
+        """
+        try:
+            volume = next((v for v in self.load_resource("volume") if v["id"] == volume_id), None)
+            if not volume:
+                return
+
+            # Stop replication tasks if running
+            if volume_id in self.replication_tasks:
+                self.replication_tasks[volume_id].set()  # Signal thread to stop
+                if volume.get("replication_settings") and notify_targets:
+                    # Notify all targets about replication stop
+                    for rep_setting in volume.get("replication_settings", []):
+                        target = rep_setting.get("replication_target", {})
+                        target_port = next((s["port"] for s in self.get_all_systems() 
+                                         if s["id"] == target.get("id")), None)
+                        if target_port:
+                            try:
+                                url = f"http://localhost:{target_port}/replication-stop"
+                                requests.post(url, json={
+                                    "volume_id": volume_id,
+                                    "reason": reason,
+                                    "sender": self.data_dir
+                                }, timeout=5)
+                            except Exception as e:
+                                self.logger.error(f"Failed to notify target {target.get('name')}: {str(e)}", 
+                                               global_log=True)
+
+            # Log the cleanup
+            self.logger.info(f"Stopped all processes for volume {volume_id}: {reason}", global_log=True)
+
+        except Exception as e:
+            self.logger.error(f"Error during cleanup for volume {volume_id}: {str(e)}", global_log=True)
+
+    def save_replication_metrics(self, metrics):
+        with open(self.replication_metrics_file, 'w') as f:
+            json.dump(metrics, f, indent=4)
+
+    def load_replication_metrics(self):
+        if not os.path.exists(self.replication_metrics_file):
+            return {}
+        with open(self.replication_metrics_file, 'r') as f:
+            return json.load(f)
+
+    def update_replication_metrics(self, volume_id, target_id, metrics):
+        """Update replication metrics for a specific volume-target pair"""
+        all_metrics = self.load_replication_metrics()
+        if volume_id not in all_metrics:
+            all_metrics[volume_id] = {}
+        all_metrics[volume_id][target_id] = {
+            **metrics,
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        self.save_replication_metrics(all_metrics)
 
 class Settings:
     def __init__(self, id, system_id):
