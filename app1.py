@@ -203,74 +203,72 @@ def get_all_volumes():
     return jsonify(volumes), 200
 
 
-# In app1.py
 @app.route('/volume/<volume_id>', methods=['PUT'])
 def update_volume(volume_id):
     try:
-        volume = next((v for v in storage_mgr.load_resource("volume") 
-                      if v["id"] == volume_id), None)
-        if volume and volume.get("is_exported"):
-            # Unexport before update
+        print(f"🔄 Received request to update volume {volume_id}")  # Debug log
+
+        # ✅ Load volume and ensure it exists
+        volumes = storage_mgr.load_resource("volume")
+        volume = next((v for v in volumes if v["id"] == volume_id), None)
+        if not volume:
+            print(f"❌ ERROR: Volume {volume_id} not found.")
+            return jsonify({"error": "Volume not found."}), 404
+
+        # ✅ Unexport if volume is currently exported (from your function)
+        if volume.get("is_exported"):
+            print(f"🚨 Unexporting volume {volume_id} before updating settings.")
             storage_mgr.unexport_volume(volume_id, reason="Volume update")
-            
-        # Continue with update logic...
+
+        # ✅ Get incoming data
         data = request.get_json(silent=True) or {}
         setting_ids = data.get("setting_ids", [])  # List of setting IDs to apply
 
-        volumes = storage_mgr.load_resource("volume")
+        # ✅ Extract snapshot frequencies (from friend's function)
+        raw_frequencies = data.get("snapshot_frequencies", volume.get("snapshot_frequencies", [60]))
+        if isinstance(raw_frequencies, str):
+            snapshot_frequencies = [int(''.join(filter(str.isdigit, raw_frequencies)))]
+        elif isinstance(raw_frequencies, list):
+            snapshot_frequencies = [int(''.join(filter(str.isdigit, str(freq)))) for freq in raw_frequencies]
+        else:
+            snapshot_frequencies = [int(raw_frequencies)]
+
+        # ✅ Load settings to validate setting IDs
         settings = storage_mgr.load_resource("settings")
-
-        volume = next((v for v in volumes if v["id"] == volume_id), None)
-        if not volume:
-            return jsonify({"error": "Volume not found"}), 404
-
-        # Validate all setting IDs exist
         valid_setting_ids = {s["id"] for s in settings}
         invalid_ids = [sid for sid in setting_ids if sid not in valid_setting_ids]
         if invalid_ids:
             return jsonify({"error": f"Invalid setting IDs: {invalid_ids}"}), 400
 
         try:
-            # Initialize settings containers if they don't exist
-            if "snapshot_settings" not in volume:
-                volume["snapshot_settings"] = {}
-            if "replication_settings" not in volume:
-                volume["replication_settings"] = []
+            # ✅ Ensure settings containers exist
+            volume.setdefault("snapshot_settings", {})
+            volume.setdefault("replication_settings", [])
 
-            # Get current settings
-            current_settings = []
-            if volume.get("snapshot_settings"):
-                current_settings.extend(volume["snapshot_settings"].keys())
-            if volume.get("replication_settings"):
-                current_settings.extend(s.get("setting_id") for s in volume["replication_settings"])
+            # ✅ Remove settings that are no longer applied
+            current_settings = set(volume["snapshot_settings"].keys()) | {
+                s.get("setting_id") for s in volume["replication_settings"]
+            }
+            for old_id in current_settings - set(setting_ids):
+                volume["snapshot_settings"].pop(old_id, None)
+                volume["replication_settings"] = [
+                    r for r in volume["replication_settings"] if r.get("setting_id") != old_id
+                ]
 
-            # Remove settings that are no longer in the list
-            for old_id in current_settings:
-                if old_id not in setting_ids:
-                    if old_id in volume["snapshot_settings"]:
-                        del volume["snapshot_settings"][old_id]
-                    volume["replication_settings"] = [
-                        r for r in volume["replication_settings"] 
-                        if r.get("setting_id") != old_id
-                    ]
-
-            # Add new settings
+            # ✅ Apply new settings
             for setting_id in setting_ids:
                 setting = next(s for s in settings if s["id"] == setting_id)
-                
+
                 if setting["type"] == "snapshot":
-                    # For snapshot settings, store as key-value in dict
                     if setting_id not in volume["snapshot_settings"]:
                         volume["snapshot_settings"][setting_id] = setting["value"]
-                
+
                 elif setting["type"] == "replication":
-                    # For replication settings, store as object in array
                     if not any(r.get("setting_id") == setting_id for r in volume["replication_settings"]):
-                        # Ensure replication target is properly set
                         target = setting.get("replication_target", {})
                         if not target or not target.get("id"):
                             return jsonify({"error": f"Setting {setting_id} has invalid replication target"}), 400
-                        
+
                         volume["replication_settings"].append({
                             "setting_id": setting_id,
                             "replication_type": setting["replication_type"],
@@ -278,17 +276,23 @@ def update_volume(volume_id):
                             "replication_target": setting["replication_target"]
                         })
 
-            # Save updated volume
+            # ✅ Save updated volume
+            volume["snapshot_frequencies"] = snapshot_frequencies  # ✅ Ensure snapshot frequencies are stored
             storage_mgr.update_resource("volume", volume_id, volume)
+
+            # ✅ Restart snapshot with new frequencies
+            print(f"🚀 Restarting snapshot for volume {volume_id} with frequencies {snapshot_frequencies}")
+            storage_mgr.start_snapshot(volume_id, snapshot_frequencies)
+
             return jsonify({"message": "Settings updated successfully", "volume": volume}), 200
 
         except Exception as e:
+            print(f"❌ ERROR updating volume settings: {str(e)}")
             return jsonify({"error": f"Failed to update volume settings: {str(e)}"}), 500
 
     except Exception as e:
+        print(f"❌ ERROR in update_volume(): {str(e)}")
         return jsonify({"error": f"Failed to update volume: {str(e)}"}), 500
-
-
 
 @app.route('/volume/<volume_id>', methods=['DELETE'])
 def delete_volume(volume_id):
@@ -404,19 +408,21 @@ def delete_host(host_id):
 # --- Settings Routes ---
 @app.route('/settings', methods=['POST'])
 def create_settings():
+    """Creates a new setting, merging replication logic with snapshot frequency handling."""
+    
+    # ✅ Ensure system exists before proceeding (from friend's function)
+    exists, system, status = ensure_system_exists()
+    if not exists:
+        return system, status
+    
     data = request.get_json(silent=True) or {}
+
+    if data.get("system_id") != system["id"]:
+        return jsonify({"error": "Invalid system_id."}), 400
 
     setting_name = data.get("name")
     setting_type = data.get("type")
     system_id = data.get("system_id")
-
-    # Only require value for non-replication settings
-    if setting_type != "replication":
-        setting_value = data.get("value")
-        if not setting_value:
-            return jsonify({"error": "Value is required for non-replication settings"}), 400
-    else:
-        setting_value = None
 
     if not all([setting_name, setting_type, system_id]):
         return jsonify({"error": "Name, type, and system_id are required"}), 400
@@ -428,15 +434,21 @@ def create_settings():
             "system_id": system_id,
             "name": setting_name,
             "type": setting_type,
+            "snapshot_frequency": data.get("snapshot_frequency", "daily")  # ✅ Added snapshot frequency
         }
 
-        if setting_type == "replication":
+        if setting_type != "replication":
+            setting_value = data.get("value")
+            if not setting_value:
+                return jsonify({"error": "Value is required for non-replication settings"}), 400
+            setting_data["value"] = setting_value
+        else:
+            # ✅ Replication-specific logic (from your function)
             replication_type = data.get("replication_type")
             delay_sec = int(data.get("delay_sec", 0))
             target_system_id = data.get("replication_target_id")
             target_system_name = data.get("replication_target_name")
 
-            # Validate replication settings
             if not replication_type or replication_type not in ["synchronous", "asynchronous"]:
                 return jsonify({"error": "Invalid replication type"}), 400
 
@@ -457,9 +469,8 @@ def create_settings():
                     "name": target_system_name
                 }
             })
-        else:
-            setting_data["value"] = setting_value
 
+        # ✅ Save settings
         storage_mgr.save_resource("settings", setting_data)
         return jsonify({"message": "Setting created successfully!", "setting_id": setting_id}), 201
 
@@ -467,7 +478,6 @@ def create_settings():
         return jsonify({"error": f"Invalid delay_sec value: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": f"Failed to create setting: {str(e)}"}), 500
-
 
 @app.route('/settings/<settings_id>', methods=['GET'])
 def get_settings(settings_id):

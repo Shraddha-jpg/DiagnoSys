@@ -1414,6 +1414,9 @@
                     <label for="max_capacity">Max Capacity (GB)</label>
                     <input type="number" id="max_capacity" placeholder="Enter max capacity">
                 </div>
+
+
+
                 <div class="crud-buttons">
                     <button class="btn btn-success" onclick="createSystem()">
                         <i class="fas fa-plus"></i> Create
@@ -1461,6 +1464,40 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Snapshot Frequency Checkbox Selection -->
+                <div class="form-control initially-hidden" id="snapshot-frequency-container">
+                    <label>Select Snapshot Frequencies:</label>
+                    <div>
+                        <input type="checkbox" id="snap_30" value="30">
+                        <label for="snap_30">Every 30 seconds</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="snap_60" value="60">
+                        <label for="snap_60">Every 1 minute</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="snap_300" value="300">
+                        <label for="snap_300">Every 5 minutes</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="snap_1800" value="1800">
+                        <label for="snap_1800">Every 30 minutes</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="snap_3600" value="3600">
+                        <label for="snap_3600">Every 1 hour</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="snap_21600" value="21600">
+                        <label for="snap_21600">Every 6 hours</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="snap_86400" value="86400">
+                        <label for="snap_86400">Daily</label>
+                    </div>
+                </div>
+
                 <div class="crud-buttons">
                     <button class="btn btn-success initially-hidden" id="create-volume-btn" onclick="createVolume()">
                         <i class="fas fa-plus"></i> Create
