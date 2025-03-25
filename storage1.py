@@ -6,6 +6,7 @@ import time
 import random
 from datetime import datetime
 import requests
+from cleanup import cleanup
 
 class StorageManager:
     def __init__(self, data_dir, global_file="global_systems.json", logger=None):
@@ -548,6 +549,88 @@ class StorageManager:
             "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         self.save_replication_metrics(all_metrics)
+
+    MAX_SNAPSHOTS = 10  # Maximum number of snapshots to keep per volume, beyond which oldest snapshots get deleted
+    MAX_IOPS = 50000  # System max IOPS (configurable)
+    IO_SIZE_KB = 8  # Assume each I/O operation is 8KB  
+
+    def cleanup(self):
+        """
+        Perform cleanup tasks:
+        - Remove oldest snapshots if they exceed MAX_SNAPSHOTS
+        - Update system throughput, CPU usage, and saturation correctly
+        """
+        try:
+            # Load system metrics
+            system_metrics = self.load_metrics()
+
+            # ---- 1️⃣ Fetch System Configuration ----
+            system_data = self.load_resource("system")  # Load system.json
+            if not system_data:
+                self.logger.warn("No system found. Skipping cleanup.", global_log=True)
+                return
+            
+            system = system_data[0]  # Assuming single system instance
+            max_capacity_gb = system.get("max_capacity", 1024)  # Default fallback of 1TB
+            max_throughput_mb = system.get("max_throughput", 200)  # Default fallback
+
+            # ---- 2️⃣ Clean Excess Snapshots ----
+            volumes = self.load_resource("volume")
+            cleaned_snapshots = 0
+
+            for volume in volumes:
+                snapshots = volume.get("snapshot_settings", {})
+
+                if len(snapshots) > self.MAX_SNAPSHOTS:
+                    # Sort snapshots by timestamp and remove the oldest
+                    sorted_snapshots = sorted(snapshots.items(), key=lambda x: x[1])
+                    excess_count = len(snapshots) - self.MAX_SNAPSHOTS
+
+                    for i in range(excess_count):
+                        del snapshots[sorted_snapshots[i][0]]
+                        cleaned_snapshots += 1
+
+                    # Save updated snapshot settings
+                    volume["snapshot_settings"] = snapshots
+                    self.update_resource("volume", volume["id"], volume)
+
+            # ---- 3️⃣ Track Hosts & System IOPS ----
+            total_throughput = 0
+            total_iops = 0
+            hosts = self.load_resource("host")
+            num_hosts = len(hosts)
+
+            for volume in volumes:
+                if volume.get("is_exported"):
+                    iops = 1000  # Assuming each host does 1000 IOPS
+                    total_iops += iops
+
+            # ---- 4️⃣ Corrected Saturation Calculation ----
+            system_saturation = round((total_iops * self.IO_SIZE_KB) / max_throughput_mb * 100, 2)
+
+            # ---- 5️⃣ Update CPU Usage ----
+            system_metrics["saturation"] = min(100, system_saturation)
+            system_metrics["cpu_usage"] = min(100, num_hosts * 5)  # Assume each host adds 5% CPU usage
+
+            # ---- 6️⃣ Reduce Load on Unexport ----
+            unexported_volumes = [v for v in volumes if not v.get("is_exported")]
+            for volume in unexported_volumes:
+                system_metrics["saturation"] = max(0, system_metrics["saturation"] - 5)
+                system_metrics["cpu_usage"] = max(0, system_metrics["cpu_usage"] - 5)
+
+            # Save updated metrics
+            self.save_metrics(system_metrics)
+
+            # Log cleanup action
+            self.logger.info(
+                f"Cleanup completed: {cleaned_snapshots} snapshots removed, "
+                f"IOPS: {total_iops}, Saturation: {system_metrics['saturation']}%, "
+                f"CPU Usage: {system_metrics['cpu_usage']}%", 
+                global_log=True
+            )
+
+        except Exception as e:
+            self.logger.error(f"Cleanup error: {str(e)}", global_log=True)
 
 class Settings:
     def __init__(self, id, system_id):

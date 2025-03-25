@@ -306,31 +306,6 @@ def delete_volume(volume_id):
 
 # --- Host Routes ---
 @app.route('/host', methods=['POST'])
-# def create_host():
-#     data = request.get_json(silent=True) or {}
-
-#     # Validate system ID
-#     system_id = data.get("system_id")
-#     if not system_id:
-#         return jsonify({"error": "❌ System ID is required to create a host."}), 400
-
-#     # Ensure system exists
-#     systems = storage_mgr.load_resource("system")
-#     if not any(s["id"] == system_id for s in systems):
-#         return jsonify({"error": "❌ Invalid system ID."}), 400
-
-#     try:
-#         host = Host(
-#             id=str(uuid.uuid4()),
-#             system_id=system_id,
-#             name=data.get("name", "DefaultHost"),
-#             application_type=data.get("application_type", "Unknown"),
-#             protocol=data.get("protocol", "Unknown")
-#         )
-#         storage_mgr.save_resource("host", host.to_dict())
-#         return jsonify({"host_id": host.id}), 201
-#     except Exception as e:
-#         return jsonify({"error": f"❌ Failed to create host: {str(e)}"}), 500
 def create_host():
     data = request.get_json(silent=True) or {}
 
@@ -635,31 +610,13 @@ def export_volume():
 
     try:
         result = storage_mgr.export_volume(volume_id, host_id, workload_size)
+        # Update system saturation after export
+        storage_mgr.cleanup()
         return jsonify({"message": result}), 200
     except Exception as e:
         import traceback
         print(f"❌ ERROR: {traceback.format_exc()}")  # Print full error traceback
         return jsonify({"error": str(e)}), 500
-
-        #return jsonify({"error": str(e)}), 500
-        
-# @app.route("/unexport-volume", methods=["POST"])
-# def unexport_volume():
-#     data = request.json
-#     volume_id = data.get("volume_id")
-
-#     print(f"📢 Received request to unexport volume {volume_id}")  # Debug log
-
-#     if not volume_id:
-#         return jsonify({"error": "Missing volume_id"}), 400
-
-#     try:
-#         result = storage_mgr.unexport_volume(volume_id)  # ✅ Call the function
-#         return jsonify({"message": result}), 200
-#     except Exception as e:
-#         import traceback
-#         print(f"❌ ERROR: {traceback.format_exc()}")  # Debugging
-#         return jsonify({"error": str(e)}), 500
 
 data_dir = "data_instance_5000"
 volume_file = os.path.join(DATA_DIR, "volume.json")
@@ -680,14 +637,6 @@ def save_volumes(volumes):
     with open(volume_file, "w") as f:
         json.dump(volumes, f, indent=4)
 
-# @app.route("/data/exported-volumes", methods=["GET"])
-# def get_exported_volumes():
-#     """Returns only exported volumes for dropdown selection."""
-#     volumes = load_volumes()
-#     print("Volumes",volumes)
-#     exported_volumes = [v for v in volumes if v.get("is_exported", False)]
-#     print(exported_volumes)
-#     return jsonify("Exported",exported_volumes), 200
 
 @app.route("/unexport-volume", methods=["POST"])
 def unexport_volume():
@@ -716,7 +665,8 @@ def unexport_volume():
         with open(volume_file_path, "w") as f:
             json.dump(volumes, f, indent=4)
             print("💾 Updated volume.json successfully!")
-
+        # Update system saturation after unexport
+        storage_mgr.cleanup()
         return jsonify({"message": "Volume unexported successfully!"}), 200
 
     except Exception as e:
@@ -831,6 +781,18 @@ def replication_stop():
     log_msg = f"Replication stopped for volume {volume_id} from {sender}: {reason}"
     logger.info(log_msg, global_log=True)
     return jsonify({"message": "Replication stop acknowledged"}), 200
+
+@app.route('/cleanup', methods=['POST'])
+def run_cleanup():
+    """
+    Trigger cleanup manually via API
+    """
+    try:
+        storage_mgr.cleanup()
+        return jsonify({"message": "Cleanup executed successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to execute cleanup: {str(e)}"}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True,use_reloader=False)
