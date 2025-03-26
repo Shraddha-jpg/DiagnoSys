@@ -1371,7 +1371,83 @@
                 margin: 3px 0;
             }
         }
+        /* Add these styles within the existing <style> tag */
+.latency-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: var(--shadow);
+    transform: translateY(0);
+    transition: var(--transition);
+}
+
+.latency-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.latency-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.chart-container {
+    width: calc(50% - 10px); /* Two charts per row with gap */
+    height: 300px;
+    background: #f9f9f9;
+    border-radius: var(--border-radius);
+    padding: 15px;
+    box-shadow: var(--shadow);
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        width: 100%; /* Full width on smaller screens */
+    }
+}
+
+.latency-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.latency-table th,
+.latency-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.latency-table th {
+    background: var(--primary);
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.latency-table td {
+    background: white;
+}
+
+.latency-table tr:nth-child(even) td {
+    background: #f9f9f9;
+}
+
+.latency-table tr:hover td {
+    background: #f0f0f0;
+    transition: background 0.2s ease;
+}
+
+.latency-table .latency-value {
+    color: var(--danger);
+    font-weight: 500;
+}
     </style>
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <button class="sidebar-toggle" id="sidebar-toggle">
@@ -1643,6 +1719,246 @@
             <i class="fas fa-times"></i> Close
         </button>
     </div>
+
+    <div class="card" id="latency-card">
+        <h2><i class="fas fa-chart-line section-icon"></i> Exported Volumes - Latency Over Last 15 Minutes</h2>
+        <div id="exportedVolumesCharts"></div>
+    </div>
+
+    <!-- <div class="card" id="top-latency-card">
+        <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 3 Volumes by Latency (Last 15 Min)</h2>
+        <ul id="topLatencyList"></ul>
+    </div>-->
+
+    <div class="card" id="top-latency-card">
+        <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 3 Volumes by Latency (Last 15 Min)</h2>
+        <div id="topLatencyTableContainer">
+            <table class="latency-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Volume ID</th>
+                        <th>Avg Latency (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="topLatencyTable"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- <script>
+        async function fetchLatencyData() {
+            const response = await fetch('/api/latency'); // API endpoint for latency data
+            const data = await response.json();
+            console.log("Latency Data:", data);
+            return data;
+        }
+    
+        // async function updateCharts() {
+        //     const latencyData = await fetchLatencyData();
+        //     const exportedVolumesDiv = document.getElementById('exportedVolumesCharts');
+        //     exportedVolumesDiv.innerHTML = ""; // Clear existing charts
+            
+        //     Object.keys(latencyData).forEach(volumeId => {
+        //         const chartContainer = document.createElement('div');
+        //         chartContainer.className = 'chart-container';
+        //         chartContainer.innerHTML = `<h3>Volume ID: ${volumeId}</h3><canvas id="chart-${volumeId}"></canvas>`;
+        //         exportedVolumesDiv.appendChild(chartContainer);
+                
+        //         const volumeCtx = document.getElementById(`chart-${volumeId}`).getContext('2d');
+        //         new Chart(volumeCtx, {
+        //             type: 'line',
+        //             data: {
+        //                 labels: latencyData[volumeId].timestamps,
+        //                 datasets: [{
+        //                     label: 'Latency (ms)',
+        //                     data: latencyData[volumeId].values,
+        //                     borderColor: 'red',
+        //                     fill: false
+        //                 }]
+        //             },
+        //             options: {
+        //                 responsive: true,
+        //                 scales: {
+        //                     x: { title: { display: true, text: 'Time' } },
+        //                     y: { title: { display: true, text: 'Latency (ms)' } }
+        //                 }
+        //             }
+        //         });
+        //     });
+        // }
+        async function updateCharts() {
+        const latencyData = await fetchLatencyData();
+        console.log("Latency Data:", latencyData);  // Debugging: Check structure
+    
+        const exportedVolumesDiv = document.getElementById('exportedVolumesCharts');
+        exportedVolumesDiv.innerHTML = ""; // Clear previous graphs
+    
+    // Check if latencyData is empty
+        if (Object.keys(latencyData).length === 0) {
+            exportedVolumesDiv.innerHTML = "<p>No latency data available for exported volumes.</p>";
+            return;
+        }
+
+        Object.keys(latencyData).forEach(volumeId => {
+            const volumeData = latencyData[volumeId];  // Extract data for the volume
+            if (!volumeData.timestamps || !volumeData.values) return; // Skip if missing data
+
+            const chartContainer = document.createElement('div');
+            chartContainer.className = 'chart-container';
+            chartContainer.innerHTML = `<h3>Volume ID: ${volumeId}</h3><canvas id="chart-${volumeId}"></canvas>`;
+            exportedVolumesDiv.appendChild(chartContainer);
+            
+            const ctx = document.getElementById(`chart-${volumeId}`).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: volumeData.timestamps,
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: volumeData.values,
+                        borderColor: 'red',
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'Latency (ms)' } }
+                    }
+                }
+            });
+        });
+        }
+
+        updateCharts();
+        setInterval(updateCharts, 60000); // Update every minute
+    </script> -->
+    <script>
+        async function fetchLatencyData() {
+            const response = await fetch('/api/latency');
+            const data = await response.json();
+            console.log("Latency Data:", data);
+            return data;
+        }
+    
+        async function updateCharts() {
+            const latencyData = await fetchLatencyData();
+            const exportedVolumesDiv = document.getElementById('exportedVolumesCharts');
+            exportedVolumesDiv.innerHTML = ""; // Clear previous charts
+            exportedVolumesDiv.className = 'latency-container';
+    
+            // Check if latencyData is empty
+            if (Object.keys(latencyData).length === 0) {
+                exportedVolumesDiv.innerHTML = "<p>No latency data available for exported volumes.</p>";
+                return;
+            }
+    
+            Object.keys(latencyData).forEach(volumeId => {
+                const volumeData = latencyData[volumeId];
+                if (!volumeData.timestamps || !volumeData.values) return; // Skip if missing data
+    
+                const chartContainer = document.createElement('div');
+                chartContainer.className = 'chart-container';
+                chartContainer.innerHTML = `
+                    <h3>Volume ID: ${volumeId}</h3>
+                    <canvas id="chart-${volumeId}"></canvas>
+                `;
+                exportedVolumesDiv.appendChild(chartContainer);
+    
+                const ctx = document.getElementById(`chart-${volumeId}`).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: volumeData.timestamps,
+                        datasets: [{
+                            label: 'Latency (ms)',
+                            data: volumeData.values,
+                            borderColor: 'red',
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { 
+                                title: { 
+                                    display: true, 
+                                    text: 'Time' 
+                                },
+                                ticks: {
+                                    maxTicksLimit: 10
+                                }
+                            },
+                            y: { 
+                                title: { 
+                                    display: true, 
+                                    text: 'Latency (ms)' 
+                                },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    
+        // Initial chart load and periodic update
+        updateCharts();
+        setInterval(updateCharts, 60000)//Update every minute
+    </script>    
+
+    <script>
+        async function fetchTopLatency() {
+    try {
+        const response = await fetch('/api/top-latency');
+        const data = await response.json();
+        console.log("Top Latency Data:", data);
+
+        const topLatencyTable = document.getElementById('topLatencyTable');
+        topLatencyTable.innerHTML = ""; // Clear previous entries
+
+        if (!data.top_volumes || data.top_volumes.length === 0) {
+            topLatencyTable.innerHTML = `
+                <tr>
+                    <td colspan="3">No data available</td>
+                </tr>
+            `;
+            return;
+        }
+
+        data.top_volumes.slice(0, 3).forEach((volume, index) => { // Limit to top 3
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${volume.volume_id}</td>
+                <td class="latency-value">${parseFloat(volume.avg_latency).toFixed(2)}</td>
+            `;
+            topLatencyTable.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error("Error fetching top latency data:", error);
+        const topLatencyTable = document.getElementById('topLatencyTable');
+        topLatencyTable.innerHTML = `
+            <tr>
+                <td colspan="3">Error loading data</td>
+            </tr>
+        `;
+    }
+}
+fetchTopLatency();
+setInterval(fetchTopLatency, 10000); // Update every 10 seconds
+    </script>
+
 
     <script>
         document.getElementById('sidebar-toggle').addEventListener('click', function() {
@@ -2297,5 +2613,7 @@
             loadExportedVolumes();
         };
     </script>
+
+
 </body>
 </html>

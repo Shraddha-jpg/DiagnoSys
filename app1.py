@@ -1,15 +1,18 @@
 import os
 import uuid
 import socket
+import datetime
 import flask
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from models1 import System, Volume, Host, Settings
 from storage1 import StorageManager
 from logger import Logger
 import json
-import requests
+import re
 
 app = Flask(__name__)
+
+print("Flask app is starting...")
 
 # Configuration for multi-instance simulation
 GLOBAL_FILE = "global_systems.json"  # Tracks all instances
@@ -795,73 +798,62 @@ def replication_receive():
     replication_type = data.get("replication_type", "unknown")
     should_log = data.get("should_log", True)
     latency = data.get("latency", 0)
-    delay_sec = data.get("delay_sec", 0)
-    all_settings = data.get("all_settings", [])
-
-    # Get source system name from sender path
-    source_system_name = sender.split('_')[-1]  # Extract port number from data_instance_XXXX
-
-    # Get target system info
-    target_systems = storage_mgr.load_resource("system")
-    target_system = target_systems[0] if target_systems else None
-    if not target_system:
-        return jsonify({"error": "Target system not found"}), 404
-
-    # Check if replicated volume exists in source
-    source_volumes = []
-    try:
-        source_url = f"http://localhost:{source_system_name}/data/volume"
-        response = requests.get(source_url)
-        if response.status_code == 200:
-            source_volumes = response.json()
-    except Exception as e:
-        logger.error(f"Failed to fetch source volumes: {str(e)}", global_log=True)
-        return jsonify({"error": "Failed to fetch source volume info"}), 500
-
-    # Find source volume
-    source_volume = next((v for v in source_volumes if v["id"] == volume_id), None)
-    if not source_volume:
-        return jsonify({"error": "Source volume not found"}), 404
-
-    # Create replicated volume name
-    replicated_volume_name = f"{source_volume['name']}_{replication_type}{source_system_name}"
-
-    # Check if replicated volume already exists
-    target_volumes = storage_mgr.load_resource("volume")
-    existing_volume = next((v for v in target_volumes if v["name"] == replicated_volume_name), None)
-
-    if not existing_volume:
-        # Check system capacity before creating volume
-        current_metrics = storage_mgr.load_metrics()
-        new_volume_size = source_volume["size"]
-        new_capacity_used = current_metrics["capacity_used"] + new_volume_size
-
-        # Verify against system max capacity
-        if new_capacity_used > target_system.get("max_capacity", 1024):  # Default 1024 GB if not set
-            logger.error(f"Cannot create replicated volume: would exceed system capacity", global_log=True)
-            return jsonify({"error": "Target system capacity would be exceeded"}), 400
-
-        # Create new volume on target system
-        new_volume = {
-            "id": str(uuid.uuid4()),
-            "name": replicated_volume_name,
-            "system_id": target_system["id"],
-            "size": new_volume_size,
-            "is_exported": False,
-            "exported_host_id": None,
-            "workload_size": 0,
-            "snapshot_settings": {},
-            "replication_settings": []
-        }
-        storage_mgr.save_resource("volume", new_volume)
-
-        # Update system metrics
-        storage_mgr.save_metrics({
-            "throughput_used": current_metrics["throughput_used"],
-            "capacity_used": new_capacity_used
-        })
-
-        logger.info(f"Created replicated volume {replicated_volume_name} on target system (size: {new_volume_size}GB)", global_log=True)
+    
+    # Get source volume details
+    source_volume = data.get("source_volume")
+    if source_volume:
+        # Create target volume if it doesn't exist
+        volumes = storage_mgr.load_resource("volume")
+        target_volume_name = f"{source_volume['name']}_{replication_type}{source_volume['system_name']}"
+        
+        # Check if target volume already exists
+        target_volume = next((v for v in volumes if v["name"] == target_volume_name), None)
+        
+        if not target_volume:
+            # Get local system info
+            systems = storage_mgr.load_resource("system")
+            local_system = systems[0] if systems else None
+            
+            if local_system:
+                # Create new volume with target system specifics
+                new_volume = {
+                    "id": str(uuid.uuid4()),
+                    "name": target_volume_name,
+                    "system_id": local_system["id"],
+                    "size": int(source_volume["size"]),  # Ensure size is integer
+                    "is_exported": False,
+                    "exported_host_id": None,
+                    "workload_size": 0,
+                    "snapshot_settings": {},
+                    "replication_settings": []
+                }
+                
+                # Update system metrics for the target system
+                try:
+                    # Update capacity used - ensure all values are integers
+                    current_metrics = storage_mgr.load_metrics()
+                    current_capacity = int(current_metrics["capacity_used"])
+                    new_volume_size = int(source_volume["size"])
+                    new_capacity = current_capacity + new_volume_size
+                    max_capacity = int(local_system.get("max_capacity", 1024))
+                    
+                    # Check if we exceed max capacity
+                    if new_capacity > max_capacity:
+                        logger.error(f"Cannot create replicated volume: would exceed system capacity ({new_capacity} > {max_capacity})", global_log=True)
+                        return jsonify({"error": "Target system capacity would be exceeded"}), 400
+                    
+                    # Update metrics
+                    storage_mgr.save_metrics({
+                        "throughput_used": int(current_metrics["throughput_used"]),
+                        "capacity_used": new_capacity
+                    })
+                    
+                    # Save the new volume
+                    storage_mgr.save_resource("volume", new_volume)
+                    logger.info(f"Created target volume {target_volume_name} for replication and updated system metrics", global_log=True)
+                except Exception as e:
+                    logger.error(f"Failed to update system metrics: {str(e)}", global_log=True)
+                    return jsonify({"error": f"Failed to update system metrics: {str(e)}"}), 500
 
     if should_log:
         # Log receiver replication event in receiver's log format
@@ -871,8 +863,7 @@ def replication_receive():
                         f"Latency: {latency}ms")
         else:
             receiver_log = (f"Received {replication_type} replication for volume {volume_id} "
-                        f"with throughput {replication_throughput} MB/s from sender {sender} "
-                        f"(Async, {delay_sec}s delay)")
+                        f"with throughput {replication_throughput} MB/s from sender {sender}")
         logger.info(receiver_log, global_log=True)
 
     # Update target's replication metrics
@@ -883,8 +874,7 @@ def replication_receive():
             "throughput": replication_throughput,
             "latency": latency,
             "timestamp": timestamp,
-            "replication_type": replication_type,
-            "delay_sec": delay_sec
+            "replication_type": replication_type
         }
     )
 
@@ -902,5 +892,90 @@ def replication_stop():
     logger.info(log_msg, global_log=True)
     return jsonify({"message": "Replication stop acknowledged"}), 200
 
+#LOG_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/logs_5000.txt")
+LOG_FILE = os.path.join(data_dir, "logs_5000.txt")
+VOLUME_FILE= os.path.join(data_dir, "volume.json")
+#VOLUME_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/volume.json")
+
+
+
+@app.route('/api/latency', methods=['GET'])
+def get_latency():
+    print("Checking if log file exists:", os.path.exists(LOG_FILE))
+    print("Checking if volume file exists:", os.path.exists(VOLUME_FILE))
+    try:
+        if not os.path.exists(LOG_FILE) or not os.path.exists(VOLUME_FILE):
+            return jsonify({"error": "Log file or volume file not found"}), 404
+            
+        # Load exported volumes
+        with open(VOLUME_FILE, "r") as f:
+            volumes = json.load(f)
+        exported_volumes = {v["id"] for v in volumes if v.get("is_exported", False)}
+        
+        now = datetime.datetime.utcnow()
+        fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
+        volume_latency_data = {}
+        
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()
+        
+        log_pattern = re.compile(r'\[(.*?)\]\[INFO\] Volume: (.*?), Host: (.*?), IOPS: (\d+), Latency: ([\d\.]+)ms, Throughput: ([\d\.]+) MB/s')
+        
+        for line in lines:
+            match = log_pattern.search(line)
+            if match:
+                timestamp_str, volume_id, host_id, iops, latency, throughput = match.groups()
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                
+                if timestamp >= fifteen_minutes_ago and volume_id in exported_volumes:
+                    if volume_id not in volume_latency_data:
+                        volume_latency_data[volume_id] = {"timestamps": [], "values": []}
+                    volume_latency_data[volume_id]["timestamps"].append(timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    volume_latency_data[volume_id]["values"].append(float(latency))
+        
+        return jsonify(volume_latency_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+LOG_FILE = os.path.join(data_dir, "logs_5000.txt")
+
+@app.route('/api/top-latency', methods=['GET'])
+def get_top_latency():
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({"error": "Log file not found"}), 404
+        
+        now = datetime.datetime.utcnow()
+        fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
+        volume_latency = {}
+
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()
+
+        log_pattern = re.compile(r'\[(.*?)\]\[INFO\] Volume: (.*?), .*? Latency: ([\d\.]+)ms')
+
+        for line in lines:
+            match = log_pattern.search(line)
+            if match:
+                timestamp_str, volume_id, latency = match.groups()
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                if timestamp >= fifteen_minutes_ago:
+                    if volume_id not in volume_latency:
+                        volume_latency[volume_id] = []
+                    volume_latency[volume_id].append(float(latency))
+
+        # Compute average latency per volume
+        avg_latency = {vol: sum(lats) / len(lats) for vol, lats in volume_latency.items() if lats}
+
+        # Get top 3 volumes by highest average latency
+        top_volumes = sorted(avg_latency.items(), key=lambda x: x[1], reverse=True)[:3]
+
+        return jsonify({"top_volumes": [{"volume_id": v, "avg_latency": round(l, 2)} for v, l in top_volumes]})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True,use_reloader=False)
+    print("Registered routes:", app.url_map)

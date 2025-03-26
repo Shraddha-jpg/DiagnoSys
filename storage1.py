@@ -351,7 +351,6 @@ class StorageManager:
     def replication_coordinator(self, volume_id, stop_event):
         """
         Coordinates replication to multiple targets, spawning a worker thread for each target.
-        Handles multiple replication settings for the same target with priority logic.
         """
         worker_threads = {}  # Keep track of worker threads by target_id
 
@@ -365,41 +364,24 @@ class StorageManager:
 
             # Get current replication settings
             current_settings = volume.get("replication_settings", [])
-            
-            # Group settings by target
-            target_settings = {}
-            for rep_setting in current_settings:
-                target_id = rep_setting.get("replication_target", {}).get("id")
-                if target_id:
-                    if target_id not in target_settings:
-                        target_settings[target_id] = []
-                    target_settings[target_id].append(rep_setting)
+            current_target_ids = {s.get("replication_target", {}).get("id") for s in current_settings 
+                                if s.get("replication_target", {}).get("id") is not None}
 
             # Stop threads for removed targets
             for target_id in list(worker_threads.keys()):
-                if target_id not in target_settings:
+                if target_id not in current_target_ids:
                     worker_threads[target_id]["stop_event"].set()
                     worker_threads[target_id]["thread"].join(timeout=1)
                     del worker_threads[target_id]
 
-            # Start/update threads for each target
-            for target_id, settings in target_settings.items():
-                if target_id not in worker_threads:
-                    # Prioritize synchronous replication if multiple settings exist
-                    priority_setting = next((s for s in settings if s.get("replication_type") == "synchronous"), 
-                                            min(settings, key=lambda s: s.get("delay_sec", float('inf'))))
-                    
-                    # Log the selected replication setting
-                    log_msg = (f"Selected replication setting for volume {volume_id} to target {target_id}: "
-                               f"Type: {priority_setting.get('replication_type')}, "
-                               f"Delay: {priority_setting.get('delay_sec', 0)} seconds")
-                    if self.logger:
-                        self.logger.info(log_msg, global_log=True)
-
+            # Start new threads for new targets
+            for rep_setting in current_settings:
+                target_id = rep_setting.get("replication_target", {}).get("id")
+                if target_id is not None and target_id not in worker_threads:
                     target_stop_event = threading.Event()
                     worker_thread = threading.Thread(
                         target=self.replication_worker,
-                        args=(volume_id, target_stop_event, priority_setting),
+                        args=(volume_id, target_stop_event, rep_setting),
                         daemon=True
                     )
                     worker_threads[target_id] = {
@@ -421,32 +403,26 @@ class StorageManager:
     def replication_worker(self, volume_id, stop_event, rep_setting):
         """
         Worker function that simulates replication of a volume to a specific target.
-        Handles multiple replication settings with detailed logging.
         """
         replication_type = rep_setting.get("replication_type")
         target = rep_setting.get("replication_target", {})
         target_id = target.get("id")
-        delay_sec = rep_setting.get("delay_sec", 0)
         last_log_time = 0
         SYNC_LOG_INTERVAL = 200  # Log every 200 seconds for sync replication
 
-        # Log detailed replication start with all settings
+        # Get source volume and system info
         volumes = self.load_resource("volume")
+        systems = self.load_resource("system")
         volume = next((v for v in volumes if v["id"] == volume_id), None)
-        
-        # Collect all replication settings for this target
-        all_settings = [s for s in volume.get("replication_settings", []) 
-                        if s.get("replication_target", {}).get("id") == target_id]
-        
-        # Detailed logging of all replication settings
-        settings_log = "Replication settings for this target:\n" + "\n".join([
-            f"- Type: {s.get('replication_type')}, Delay: {s.get('delay_sec', 0)} seconds" 
-            for s in all_settings
-        ])
-        
-        # Log replication start with detailed settings
+        system = next((s for s in systems if s["id"] == volume.get("system_id")), None)
+
+        if not volume or not system:
+            self.logger.error(f"Source volume or system not found for replication", global_log=True)
+            return
+
+        # Log replication start
         start_log = (f"Started {replication_type} replication for volume {volume_id} "
-                     f"to target {target.get('name')} with {delay_sec}s delay\n{settings_log}")
+                     f"to target {target.get('name')}")
         self.logger.info(start_log, global_log=True)
 
         while not stop_event.is_set():
@@ -456,6 +432,8 @@ class StorageManager:
             if not volume or not volume.get("is_exported"):
                 break
 
+            delay_sec = rep_setting.get("delay_sec", 0)
+            
             # Simulate replication throughput calculation.
             io_count = random.randint(50, 500)
             latency = round(random.uniform(1.0, 5.0), 2)
@@ -468,7 +446,6 @@ class StorageManager:
                 "latency": latency,
                 "io_count": io_count,
                 "replication_type": replication_type,
-                "delay_sec": delay_sec,
                 "timestamp": timestamp
             }
             self.update_replication_metrics(volume_id, target_id, metrics)
@@ -481,16 +458,14 @@ class StorageManager:
             )
 
             if should_log:
-                # Log sender replication event with detailed settings
+                # Log sender replication event.
                 if replication_type == "synchronous":
                     sender_log = (f"Active synchronous replication for volume {volume_id} "
                                 f"to target {target.get('name')} - "
-                                f"Throughput: {replication_throughput} MB/s, "
-                                f"Latency: {latency}ms")
+                                f"Throughput: {replication_throughput} MB/s, Latency: {latency}ms")
                 else:
                     sender_log = (f"Replicating volume {volume_id} with throughput "
-                                f"{replication_throughput} MB/s to target {target.get('name')} "
-                                f"(Async, {delay_sec}s delay)")
+                                f"{replication_throughput} MB/s to target {target.get('name')}")
                 if self.logger:
                     self.logger.info(sender_log, global_log=True)
                 last_log_time = current_time
@@ -508,10 +483,14 @@ class StorageManager:
                         "sender": self.data_dir,
                         "timestamp": timestamp,
                         "replication_type": replication_type,
-                        "delay_sec": delay_sec,
                         "should_log": should_log,  # Tell target whether to log
                         "latency": latency,
-                        "all_settings": all_settings  # Send all settings for context
+                        "source_volume": {
+                            "id": volume["id"],
+                            "name": volume["name"],
+                            "size": volume["size"],
+                            "system_name": system["name"]
+                        }
                     }
                     response = requests.post(target_url, json=payload, timeout=5)
                     if response.status_code != 200:
@@ -525,9 +504,8 @@ class StorageManager:
             wait_time = delay_sec if replication_type == "asynchronous" and delay_sec > 0 else 10
             time.sleep(wait_time)
 
-        # Log replication stop with detailed settings
-        stop_log = (f"Stopped {replication_type} replication for volume {volume_id} "
-                    f"to target {target.get('name')} with {delay_sec}s delay")
+        # Log replication stop
+        stop_log = f"Stopped {replication_type} replication for volume {volume_id} to target {target.get('name')}"
         self.logger.info(stop_log, global_log=True)
 
     def cleanup_volume_processes(self, volume_id, reason="", notify_targets=True):
