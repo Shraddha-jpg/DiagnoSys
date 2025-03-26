@@ -7,6 +7,7 @@ from models1 import System, Volume, Host, Settings
 from storage1 import StorageManager
 from logger import Logger
 import json
+import requests
 
 app = Flask(__name__)
 
@@ -794,6 +795,73 @@ def replication_receive():
     replication_type = data.get("replication_type", "unknown")
     should_log = data.get("should_log", True)
     latency = data.get("latency", 0)
+    delay_sec = data.get("delay_sec", 0)
+    all_settings = data.get("all_settings", [])
+
+    # Get source system name from sender path
+    source_system_name = sender.split('_')[-1]  # Extract port number from data_instance_XXXX
+
+    # Get target system info
+    target_systems = storage_mgr.load_resource("system")
+    target_system = target_systems[0] if target_systems else None
+    if not target_system:
+        return jsonify({"error": "Target system not found"}), 404
+
+    # Check if replicated volume exists in source
+    source_volumes = []
+    try:
+        source_url = f"http://localhost:{source_system_name}/data/volume"
+        response = requests.get(source_url)
+        if response.status_code == 200:
+            source_volumes = response.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch source volumes: {str(e)}", global_log=True)
+        return jsonify({"error": "Failed to fetch source volume info"}), 500
+
+    # Find source volume
+    source_volume = next((v for v in source_volumes if v["id"] == volume_id), None)
+    if not source_volume:
+        return jsonify({"error": "Source volume not found"}), 404
+
+    # Create replicated volume name
+    replicated_volume_name = f"{source_volume['name']}_{replication_type}{source_system_name}"
+
+    # Check if replicated volume already exists
+    target_volumes = storage_mgr.load_resource("volume")
+    existing_volume = next((v for v in target_volumes if v["name"] == replicated_volume_name), None)
+
+    if not existing_volume:
+        # Check system capacity before creating volume
+        current_metrics = storage_mgr.load_metrics()
+        new_volume_size = source_volume["size"]
+        new_capacity_used = current_metrics["capacity_used"] + new_volume_size
+
+        # Verify against system max capacity
+        if new_capacity_used > target_system.get("max_capacity", 1024):  # Default 1024 GB if not set
+            logger.error(f"Cannot create replicated volume: would exceed system capacity", global_log=True)
+            return jsonify({"error": "Target system capacity would be exceeded"}), 400
+
+        # Create new volume on target system
+        new_volume = {
+            "id": str(uuid.uuid4()),
+            "name": replicated_volume_name,
+            "system_id": target_system["id"],
+            "size": new_volume_size,
+            "is_exported": False,
+            "exported_host_id": None,
+            "workload_size": 0,
+            "snapshot_settings": {},
+            "replication_settings": []
+        }
+        storage_mgr.save_resource("volume", new_volume)
+
+        # Update system metrics
+        storage_mgr.save_metrics({
+            "throughput_used": current_metrics["throughput_used"],
+            "capacity_used": new_capacity_used
+        })
+
+        logger.info(f"Created replicated volume {replicated_volume_name} on target system (size: {new_volume_size}GB)", global_log=True)
 
     if should_log:
         # Log receiver replication event in receiver's log format
@@ -803,7 +871,8 @@ def replication_receive():
                         f"Latency: {latency}ms")
         else:
             receiver_log = (f"Received {replication_type} replication for volume {volume_id} "
-                        f"with throughput {replication_throughput} MB/s from sender {sender}")
+                        f"with throughput {replication_throughput} MB/s from sender {sender} "
+                        f"(Async, {delay_sec}s delay)")
         logger.info(receiver_log, global_log=True)
 
     # Update target's replication metrics
@@ -814,7 +883,8 @@ def replication_receive():
             "throughput": replication_throughput,
             "latency": latency,
             "timestamp": timestamp,
-            "replication_type": replication_type
+            "replication_type": replication_type,
+            "delay_sec": delay_sec
         }
     )
 
