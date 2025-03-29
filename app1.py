@@ -1,14 +1,19 @@
 import os
 import uuid
 import socket
+import datetime
 import flask
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from models1 import System, Volume, Host, Settings
 from storage1 import StorageManager
 from logger import Logger
 import json
+import requests
+import re
 
 app = Flask(__name__)
+
+print("Flask app is starting...")
 
 # Configuration for multi-instance simulation
 GLOBAL_FILE = "global_systems.json"  # Tracks all instances
@@ -754,6 +759,62 @@ def replication_receive():
     replication_type = data.get("replication_type", "unknown")
     should_log = data.get("should_log", True)
     latency = data.get("latency", 0)
+    
+    # Get source volume details
+    source_volume = data.get("source_volume")
+    if source_volume:
+        # Create target volume if it doesn't exist
+        volumes = storage_mgr.load_resource("volume")
+        target_volume_name = f"{source_volume['name']}_{replication_type}{source_volume['system_name']}"
+        
+        # Check if target volume already exists
+        target_volume = next((v for v in volumes if v["name"] == target_volume_name), None)
+        
+        if not target_volume:
+            # Get local system info
+            systems = storage_mgr.load_resource("system")
+            local_system = systems[0] if systems else None
+            
+            if local_system:
+                # Create new volume with target system specifics
+                new_volume = {
+                    "id": str(uuid.uuid4()),
+                    "name": target_volume_name,
+                    "system_id": local_system["id"],
+                    "size": int(source_volume["size"]),  # Ensure size is integer
+                    "is_exported": False,
+                    "exported_host_id": None,
+                    "workload_size": 0,
+                    "snapshot_settings": {},
+                    "replication_settings": []
+                }
+                
+                # Update system metrics for the target system
+                try:
+                    # Update capacity used - ensure all values are integers
+                    current_metrics = storage_mgr.load_metrics()
+                    current_capacity = int(current_metrics["capacity_used"])
+                    new_volume_size = int(source_volume["size"])
+                    new_capacity = current_capacity + new_volume_size
+                    max_capacity = int(local_system.get("max_capacity", 1024))
+                    
+                    # Check if we exceed max capacity
+                    if new_capacity > max_capacity:
+                        logger.error(f"Cannot create replicated volume: would exceed system capacity ({new_capacity} > {max_capacity})", global_log=True)
+                        return jsonify({"error": "Target system capacity would be exceeded"}), 400
+                    
+                    # Update metrics
+                    storage_mgr.save_metrics({
+                        "throughput_used": int(current_metrics["throughput_used"]),
+                        "capacity_used": new_capacity
+                    })
+                    
+                    # Save the new volume
+                    storage_mgr.save_resource("volume", new_volume)
+                    logger.info(f"Created target volume {target_volume_name} for replication and updated system metrics", global_log=True)
+                except Exception as e:
+                    logger.error(f"Failed to update system metrics: {str(e)}", global_log=True)
+                    return jsonify({"error": f"Failed to update system metrics: {str(e)}"}), 500
 
     if should_log:
         # Log receiver replication event in receiver's log format
@@ -792,6 +853,90 @@ def replication_stop():
     logger.info(log_msg, global_log=True)
     return jsonify({"message": "Replication stop acknowledged"}), 200
 
+#LOG_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/logs_5000.txt")
+LOG_FILE = os.path.join(data_dir, "logs_5000.txt")
+VOLUME_FILE= os.path.join(data_dir, "volume.json")
+#VOLUME_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/volume.json")
+
+
+
+@app.route('/api/latency', methods=['GET'])
+def get_latency():
+    print("Checking if log file exists:", os.path.exists(LOG_FILE))
+    print("Checking if volume file exists:", os.path.exists(VOLUME_FILE))
+    try:
+        if not os.path.exists(LOG_FILE) or not os.path.exists(VOLUME_FILE):
+            return jsonify({"error": "Log file or volume file not found"}), 404
+            
+        # Load exported volumes
+        with open(VOLUME_FILE, "r") as f:
+            volumes = json.load(f)
+        exported_volumes = {v["id"] for v in volumes if v.get("is_exported", False)}
+        
+        now = datetime.datetime.utcnow()
+        fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
+        volume_latency_data = {}
+        
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()
+        
+        log_pattern = re.compile(r'\[(.*?)\]\[INFO\] Volume: (.*?), Host: (.*?), IOPS: (\d+), Latency: ([\d\.]+)ms, Throughput: ([\d\.]+) MB/s')
+        
+        for line in lines:
+            match = log_pattern.search(line)
+            if match:
+                timestamp_str, volume_id, host_id, iops, latency, throughput = match.groups()
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                
+                if timestamp >= fifteen_minutes_ago and volume_id in exported_volumes:
+                    if volume_id not in volume_latency_data:
+                        volume_latency_data[volume_id] = {"timestamps": [], "values": []}
+                    volume_latency_data[volume_id]["timestamps"].append(timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"))
+                    volume_latency_data[volume_id]["values"].append(float(latency))
+        
+        return jsonify(volume_latency_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+LOG_FILE = os.path.join(data_dir, "logs_5000.txt")
+
+@app.route('/api/top-latency', methods=['GET'])
+def get_top_latency():
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({"error": "Log file not found"}), 404
+        
+        now = datetime.datetime.utcnow()
+        fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
+        volume_latency = {}
+
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()
+
+        log_pattern = re.compile(r'\[(.*?)\]\[INFO\] Volume: (.*?), .*? Latency: ([\d\.]+)ms')
+
+        for line in lines:
+            match = log_pattern.search(line)
+            if match:
+                timestamp_str, volume_id, latency = match.groups()
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                if timestamp >= fifteen_minutes_ago:
+                    if volume_id not in volume_latency:
+                        volume_latency[volume_id] = []
+                    volume_latency[volume_id].append(float(latency))
+
+        # Compute average latency per volume
+        avg_latency = {vol: sum(lats) / len(lats) for vol, lats in volume_latency.items() if lats}
+
+        # Get top 3 volumes by highest average latency
+        top_volumes = sorted(avg_latency.items(), key=lambda x: x[1], reverse=True)[:3]
+
+        return jsonify({"top_volumes": [{"volume_id": v, "avg_latency": round(l, 2)} for v, l in top_volumes]})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/cleanup', methods=['POST'])
 def run_cleanup():
     """
@@ -799,10 +944,11 @@ def run_cleanup():
     """
     try:
         storage_mgr.cleanup()
-        return jsonify({"message": "Cleanup executed successfully"}), 200
+        return jsonify({"message": "Housekeeping executed successfully"}), 200
     except Exception as e:
-        return jsonify({"error": f"Failed to execute cleanup: {str(e)}"}), 500
-
+        return jsonify({"error": f"Failed to execute housekeeping: {str(e)}"}), 500
+    
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True,use_reloader=False)
+    print("Registered routes:", app.url_map)

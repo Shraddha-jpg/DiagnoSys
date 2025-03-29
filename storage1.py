@@ -33,8 +33,29 @@ class StorageManager:
         return self.data_dir.split('_')[-1]
 
     def save_metrics(self, metrics):
-        with open(self.metrics_file, 'w') as f:
+        """Safely saves system metrics while preventing corruption and ensuring consistency."""
+        
+        if not isinstance(metrics, dict):
+            print("Warning: system_metrics is not a dictionary. Resetting to defaults.")
+            metrics = {"throughput_used": 0, "capacity_used": 0, "saturation": 0, "cpu_usage": 0}
+
+        # ✅ Ensure valid keys exist in metrics
+        required_keys = ["throughput_used", "capacity_used", "saturation", "cpu_usage"]
+        for key in required_keys:
+            if key not in metrics:
+                metrics[key] = 0  # Default missing keys to zero
+
+        # ✅ Atomic JSON write to prevent corruption
+        tmp_file_path = self.metrics_file + ".tmp"
+        with open(tmp_file_path, "w") as f:
             json.dump(metrics, f, indent=4)
+
+        os.replace(tmp_file_path, self.metrics_file)  # ✅ Prevents incomplete writes
+
+        # ✅ Debugging: Log confirmation of saved metrics
+        #if self.logger:
+            #self.logger.info(f"System metrics updated successfully: {metrics}", global_log=True)
+
 
     def load_metrics(self):
         if not os.path.exists(self.metrics_file):
@@ -223,7 +244,7 @@ class StorageManager:
         
 
     def export_volume(self, volume_id, host_id, workload_size):
-        print(f"Exporting volume {volume_id} to host {host_id}")  # Debug log
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Exporting volume {volume_id} to host {host_id}")  # Debug log
 
         # Load volumes and hosts
         volumes = self.load_resource("volume")
@@ -245,7 +266,7 @@ class StorageManager:
         volume["exported_host_id"] = host_id
         volume["workload_size"] = workload_size
 
-        print(f"Starting Host I/O for volume {volume_id}")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting Host I/O for volume {volume_id}")
 
         # Use update_resource() instead of save_resource()
         self.update_resource("volume", volume_id, volume)  # Updates only this volume
@@ -264,99 +285,58 @@ class StorageManager:
         """Simulate I/O operations for a volume using logger"""
         print(f"Host I/O started for volume {volume_id}")
         
-        io_lock = threading.Lock()  # ✅ Lock to prevent concurrent file writes
 
         def io_worker():
             try:
-                # ✅ Load volumes & fetch the current volume
                 volumes = self.load_resource("volume")
                 volume = next((v for v in volumes if v["id"] == volume_id), None)
 
                 if volume and volume.get("is_exported", False):
                     host_id = volume.get("exported_host_id", "Unknown")
-                    initial_io_count = random.randint(800, 1200)
-                    initial_latency = round(random.uniform(1.5, 8.0), 2)
-                    initial_throughput = round(initial_io_count * self.IO_SIZE_KB / 1024, 2)
+                    io_count = random.randint(800, 1200)
+                    latency = round(random.uniform(1.5, 8.0), 2)
+                    throughput = round(io_count * self.IO_SIZE_KB / 1024, 2)
 
-                    # ✅ Fix: Load io_metrics & ensure valid JSON structure
+                    # ✅ Ensure io_metrics is only inside data_instance_5001
                     metrics = self.load_resource("io_metrics")
-                    
-                    # ✅ Ensure io_metrics is a **clean list** (no nested lists)
+
                     if not isinstance(metrics, list):
                         metrics = []
                     elif any(isinstance(m, list) for m in metrics):
-                        metrics = [m for sublist in metrics for m in (sublist if isinstance(sublist, list) else [sublist])]
+                        metrics = [item for sublist in metrics for item in (sublist if isinstance(sublist, list) else [sublist])]
 
-                    # ✅ Ensure unique entry for the volume
+                    metrics = [m for m in metrics if isinstance(m, dict)]
+
+                    # ✅ Avoid duplicate entries for the same volume
                     if not any(m.get("volume_id") == volume_id for m in metrics):
-                        initial_entry = {
+                        metrics.append({
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "volume_id": volume_id,
                             "host_id": host_id,
-                            "io_count": initial_io_count,
-                            "latency": initial_latency,
-                            "throughput": initial_throughput
-                        }
-                        metrics.append(initial_entry)
+                            "io_count": io_count,
+                            "latency": latency,
+                            "throughput": throughput
+                        })
+                        self.save_resource("io_metrics", metrics)
 
-                    # ✅ Fix: Lock JSON write to prevent corruption
-                    with io_lock:
-                        with open(os.path.join(self.data_dir, "io_metrics.json"), "w") as f:
-                            json.dump(metrics, f, indent=4)
-
-                    # ✅ Fix: Update system saturation immediately
-                    system_metrics = self.load_metrics()
-                    max_throughput_mb = int(self.load_resource("system")[0].get("max_throughput", 200))
-
-                    system_saturation = max(4, round((initial_throughput * 100) / max_throughput_mb, 2)) if max_throughput_mb > 0 else 0
-                    system_metrics["saturation"] = system_saturation
-                    self.save_metrics(system_metrics)
-
-                    # ✅ Log first IOPS entry
-                    log_message = (
-                        f"Volume: {volume_id}, Host: {host_id}, "
-                        f"IOPS: {initial_io_count}, Latency: {initial_latency}ms, Throughput: {initial_throughput} MB/s, "
-                        f"Saturation: {system_saturation}%"
-                    )
-                    if self.logger:
-                        self.logger.info(log_message, global_log=True)
-
-                # ✅ Enter the continuous update loop
                 while True:
                     volumes = self.load_resource("volume")
                     volume = next((v for v in volumes if v["id"] == volume_id), None)
 
                     if not volume or not volume.get("is_exported", False):
-                        break  # ✅ Stop if volume is unexported
+                        break
 
                     host_id = volume.get("exported_host_id", "Unknown")
                     io_count = random.randint(100, 1000)
                     latency = round(random.uniform(1.0, 10.0), 2)
                     throughput = round(io_count * self.IO_SIZE_KB / 1024, 2)
 
-                    # ✅ Update system saturation in each cycle
-                    system_metrics = self.load_metrics()
-                    if max_throughput_mb > 0 and throughput > 0:
-                        system_saturation = round((throughput * 100) / max_throughput_mb, 2)
-                    else:
-                        system_saturation = 0  # ✅ Avoid division errors when no throughput exists
-
-                    system_metrics["saturation"] = system_saturation
-                    self.save_metrics(system_metrics)
-
-                    # ✅ Log using the logger
-                    log_message = (
-                        f"Volume: {volume_id}, Host: {host_id}, "
-                        f"IOPS: {io_count}, Latency: {latency}ms, Throughput: {throughput} MB/s, "
-                        f"Saturation: {system_saturation}%"
-                    )
-                    if self.logger:
-                        self.logger.info(log_message, global_log=True)
-
-                    # ✅ Fix: Load io_metrics & ensure JSON consistency
                     metrics = self.load_resource("io_metrics")
                     if not isinstance(metrics, list):
                         metrics = []
+                    else :
+                        metrics = [m for sublist in metrics for m in (sublist if isinstance(sublist, list) else [sublist])]
+                        metrics = [m for m in metrics if isinstance(m, dict)]  # Ensure elements are dicts
 
                     metrics.append({
                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -366,20 +346,24 @@ class StorageManager:
                         "latency": latency,
                         "throughput": throughput
                     })
+                    self.save_resource("io_metrics", metrics)
 
-                    # ✅ Fix: Lock write operation to prevent corruption
-                    with io_lock:
-                        with open(os.path.join(self.data_dir, "io_metrics.json"), "w") as f:
-                            json.dump(metrics, f, indent=4)
+                    if self.logger:
+                        self.logger.info(
+                            f"Volume: {volume_id}, "
+                            f"Host: {host_id}, IOPS: {io_count}, Latency: {latency}ms, "
+                            f"Throughput: {throughput} MB/s"
+                        )
 
-                    time.sleep(30)  # ✅ Maintain interval for updates
-
+                    time.sleep(30)
             except Exception as e:
                 if self.logger:
                     self.logger.error(f"Host I/O error: {str(e)}", global_log=True)
 
+    
         worker_thread = threading.Thread(target=io_worker, daemon=True)
         worker_thread.start()
+        print(f"Background thread started for volume {volume_id}")  # Debug log
 
 
 
@@ -541,7 +525,7 @@ class StorageManager:
             # Get current replication settings
             current_settings = volume.get("replication_settings", [])
             current_target_ids = {s.get("replication_target", {}).get("id") for s in current_settings 
-                                if s.get("replication_target", {}).get("id") is not None}
+                                 if s.get("replication_target", {}).get("id") is not None}
 
             # Stop threads for removed targets
             for target_id in list(worker_threads.keys()):
@@ -586,6 +570,17 @@ class StorageManager:
         last_log_time = 0
         SYNC_LOG_INTERVAL = 200  # Log every 200 seconds for sync replication
 
+        # Get source volume and system info
+        volumes = self.load_resource("volume")
+        systems = self.load_resource("system")
+        volume = next((v for v in volumes if v["id"] == volume_id), None)
+        
+        system = next((s for s in systems if s["id"] == volume.get("system_id")), None)
+ 
+        if not volume or not system:
+            self.logger.error(f"Source volume or system not found for replication", global_log=True)
+            return
+
         # Log replication start
         start_log = (f"Started {replication_type} replication for volume {volume_id} "
                      f"to target {target.get('name')}")
@@ -597,9 +592,9 @@ class StorageManager:
             volume = next((v for v in volumes if v["id"] == volume_id), None)
             if not volume or not volume.get("is_exported"):
                 break
-
-            delay_sec = rep_setting.get("delay_sec", 0)
             
+            delay_sec = rep_setting.get("delay_sec", 0)
+
             # Simulate replication throughput calculation.
             io_count = random.randint(50, 500)
             latency = round(random.uniform(1.0, 5.0), 2)
@@ -624,7 +619,7 @@ class StorageManager:
             )
 
             if should_log:
-                # Log sender replication event.
+                # Log sender replication event
                 if replication_type == "synchronous":
                     sender_log = (f"Active synchronous replication for volume {volume_id} "
                                 f"to target {target.get('name')} - "
@@ -650,7 +645,13 @@ class StorageManager:
                         "timestamp": timestamp,
                         "replication_type": replication_type,
                         "should_log": should_log,  # Tell target whether to log
-                        "latency": latency
+                        "latency": latency,
+                        "source_volume": {
+                             "id": volume["id"],
+                             "name": volume["name"],
+                             "size": volume["size"],
+                             "system_name": system["name"]
+                         }
                     }
                     response = requests.post(target_url, json=payload, timeout=5)
                     if response.status_code != 200:
@@ -800,7 +801,6 @@ class StorageManager:
                 if volume.get("is_exported"):
                     # ✅ Fetch the latest IOPS for the volume from io_metrics
                     latest_metrics = next((m for m in reversed(io_metrics) if isinstance(m, dict) and m.get("volume_id") == volume["id"]), None)
-
                     iops = latest_metrics.get("io_count", 1000) if latest_metrics else 1000
 
 
@@ -808,16 +808,12 @@ class StorageManager:
                     total_throughput += (iops * self.IO_SIZE_KB) / 1024  # Convert KB to MB
 
 
-            # ✅ Apply throughput capping (ensure it doesn't exceed max throughput)
             total_throughput = min(max_throughput_mb, total_throughput)
 
-            # ✅ Ensure correct minimum saturation for first export
-            # ✅ Ensure correct minimum saturation for first export
             if max_throughput_mb > 0:
                 if total_throughput > 0:
                     system_saturation = max(4, (total_throughput * 100) / max_throughput_mb)
                 else:
-                    # ✅ Fix: If there's still an exported volume, enforce 4% even before throughput updates
                     if any(v.get("is_exported") for v in volumes):
                         system_saturation = 4
                     else:
@@ -825,38 +821,23 @@ class StorageManager:
             else:
                 system_saturation = 0
 
-
-
-
-
-
-
-
-
-
-            
-
-            # ---- 6️⃣ Update CPU Usage ----
             system_metrics["saturation"] = system_saturation
             system_metrics["cpu_usage"] = min(100, num_hosts * 5)
+            system_metrics["throughput_used"] = total_throughput
 
-            # ---- 7️⃣ Reduce Load on Unexport ----
-            # ---- 7️⃣ Reduce Load on Unexport ----
             prev_saturation = system_metrics["saturation"]
 
             for volume in volumes:
                 if not volume.get("is_exported"):
-                    # ✅ Reduce saturation proportionally instead of fixed -5
+                    # Reduce saturation proportionally instead of fixed - 5
                     system_metrics["saturation"] = max(0, prev_saturation - (total_throughput * 100) / max_throughput_mb)
                     system_metrics["cpu_usage"] = max(0, system_metrics["cpu_usage"] - 5)
 
 
-            # Save updated metrics
             self.save_metrics(system_metrics)
 
-            # ✅ Fix: Log Throughput for Debugging
             self.logger.info(
-                f"Cleanup completed: {cleaned_snapshots} snapshots removed, "
+                f"Housekeeping completed: {cleaned_snapshots} snapshots removed, "
                 f"IOPS: {total_iops}, Saturation: {system_metrics['saturation']}%, "
                 f"Throughput: {total_throughput} MB/s, "
                 f"CPU Usage: {system_metrics['cpu_usage']}%", 
@@ -864,10 +845,7 @@ class StorageManager:
             )
 
         except Exception as e:
-            self.logger.error(f"Cleanup error: {str(e)}", global_log=True)
-
-
-
+            self.logger.error(f"Housekeeping error: {str(e)}", global_log=True)
 
 class Settings:
     def __init__(self, id, system_id):
