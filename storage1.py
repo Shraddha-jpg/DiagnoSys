@@ -16,6 +16,9 @@ class StorageManager:
         self.replication_metrics_file = os.path.join(data_dir, f"replication_metrics_{self.get_port()}.json")
         os.makedirs(data_dir, exist_ok=True)
 
+        # ✅ Initialize snapshot_threads (Now supports multiple frequencies per volume)
+        self.snapshot_threads = {}
+
         if not os.path.exists(self.global_file) or os.stat(self.global_file).st_size == 0:
             with open(self.global_file, "w") as f:
                 json.dump([], f, indent=4)
@@ -274,7 +277,7 @@ class StorageManager:
         # Start background tasks: host I/O, snapshots, and replication.
         self.start_host_io(volume_id)
         if volume.get("snapshot_settings"):
-            self.start_snapshot(volume_id)
+            self.start_snapshot(volume_id, frequencies=volume["snapshot_settings"].get("frequencies", [60]))
         # If replication settings exist, start replication for this volume.
         if volume.get("replication_settings"):
             self.start_replication(volume_id)
@@ -754,18 +757,16 @@ class StorageManager:
             cleaned_snapshots = 0
 
             for volume in volumes:
-                snapshots = volume.get("snapshot_settings", {})
-
-                if len(snapshots) > self.MAX_SNAPSHOTS:
-                    sorted_snapshots = sorted(snapshots.items(), key=lambda x: x[1])
-                    excess_count = len(snapshots) - self.MAX_SNAPSHOTS
-
-                    for i in range(excess_count):
-                        del snapshots[sorted_snapshots[i][0]]
-                        cleaned_snapshots += 1
-
-                    volume["snapshot_settings"] = snapshots
+                snapshot_count = volume.get("snapshot_count", 0)  # Get snapshot count from volume JSON
+                
+                # ✅ Check if cleanup is needed
+                if snapshot_count > self.MAX_SNAPSHOTS:
+                    excess_count = snapshot_count - self.MAX_SNAPSHOTS
+                    
+                    # ✅ Update snapshot count in the volume
+                    volume["snapshot_count"] = self.MAX_SNAPSHOTS  # Set to limit after cleanup
                     self.update_resource("volume", volume["id"], volume)
+                    cleaned_snapshots += excess_count
 
             # ---- 3️⃣ Track Hosts & System IOPS ----
             hosts = self.load_resource("host")

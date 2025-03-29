@@ -227,9 +227,9 @@ def update_volume(volume_id):
 
         # ✅ Get incoming data
         data = request.get_json(silent=True) or {}
+        print(f"📥 Incoming data: {data}")  # Debug log
         setting_ids = data.get("setting_ids", [])  # List of setting IDs to apply
 
-        # ✅ Extract snapshot frequencies (from friend's function)
         raw_frequencies = data.get("snapshot_frequencies", volume.get("snapshot_frequencies", [60]))
         if isinstance(raw_frequencies, str):
             snapshot_frequencies = [int(''.join(filter(str.isdigit, raw_frequencies)))]
@@ -237,6 +237,8 @@ def update_volume(volume_id):
             snapshot_frequencies = [int(''.join(filter(str.isdigit, str(freq)))) for freq in raw_frequencies]
         else:
             snapshot_frequencies = [int(raw_frequencies)]
+
+        print(f"✅ Volume {volume_id} updated with snapshot_frequencies: {snapshot_frequencies}")  # Debug log
 
         # ✅ Load settings to validate setting IDs
         settings = storage_mgr.load_resource("settings")
