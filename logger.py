@@ -51,6 +51,16 @@ class Logger:
             global_entry = f"[PORT {self.port}][{timestamp}][ERROR] {message}"
             self._write_log(self.global_log_file, global_entry)
 
+    def cleanup_log(self, message):
+        """
+        Special logging for cleanup events.
+        """
+        timestamp = self._get_timestamp()
+        log_entry = f"[{timestamp}][CLEANUP] {message}"
+        self._write_log(self.local_log_file, log_entry)
+        self._write_log(self.global_log_file, log_entry)
+
+
     def get_local_logs(self, last_n_lines=100):
         try:
             with open(self.local_log_file, 'r') as f:

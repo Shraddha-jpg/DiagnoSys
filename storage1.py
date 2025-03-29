@@ -16,6 +16,9 @@ class StorageManager:
         self.replication_metrics_file = os.path.join(data_dir, f"replication_metrics_{self.get_port()}.json")
         os.makedirs(data_dir, exist_ok=True)
 
+        # ✅ Initialize snapshot_threads (Now supports multiple frequencies per volume)
+        self.snapshot_threads = {}
+
         if not os.path.exists(self.global_file) or os.stat(self.global_file).st_size == 0:
             with open(self.global_file, "w") as f:
                 json.dump([], f, indent=4)
@@ -33,8 +36,29 @@ class StorageManager:
         return self.data_dir.split('_')[-1]
 
     def save_metrics(self, metrics):
-        with open(self.metrics_file, 'w') as f:
+        """Safely saves system metrics while preventing corruption and ensuring consistency."""
+        
+        if not isinstance(metrics, dict):
+            print("Warning: system_metrics is not a dictionary. Resetting to defaults.")
+            metrics = {"throughput_used": 0, "capacity_used": 0, "saturation": 0, "cpu_usage": 0}
+
+        # ✅ Ensure valid keys exist in metrics
+        required_keys = ["throughput_used", "capacity_used", "saturation", "cpu_usage"]
+        for key in required_keys:
+            if key not in metrics:
+                metrics[key] = 0  # Default missing keys to zero
+
+        # ✅ Atomic JSON write to prevent corruption
+        tmp_file_path = self.metrics_file + ".tmp"
+        with open(tmp_file_path, "w") as f:
             json.dump(metrics, f, indent=4)
+
+        os.replace(tmp_file_path, self.metrics_file)  # ✅ Prevents incomplete writes
+
+        # ✅ Debugging: Log confirmation of saved metrics
+        #if self.logger:
+            #self.logger.info(f"System metrics updated successfully: {metrics}", global_log=True)
+
 
     def load_metrics(self):
         if not os.path.exists(self.metrics_file):
@@ -223,7 +247,7 @@ class StorageManager:
         
 
     def export_volume(self, volume_id, host_id, workload_size):
-        print(f"Exporting volume {volume_id} to host {host_id}")  # Debug log
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Exporting volume {volume_id} to host {host_id}")  # Debug log
 
         # Load volumes and hosts
         volumes = self.load_resource("volume")
@@ -245,7 +269,7 @@ class StorageManager:
         volume["exported_host_id"] = host_id
         volume["workload_size"] = workload_size
 
-        print(f"Starting Host I/O for volume {volume_id}")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting Host I/O for volume {volume_id}")
 
         # Use update_resource() instead of save_resource()
         self.update_resource("volume", volume_id, volume)  # Updates only this volume
@@ -253,7 +277,7 @@ class StorageManager:
         # Start background tasks: host I/O, snapshots, and replication.
         self.start_host_io(volume_id)
         if volume.get("snapshot_settings"):
-            self.start_snapshot(volume_id)
+            self.start_snapshot(volume_id, frequencies=volume["snapshot_settings"].get("frequencies", [60]))
         # If replication settings exist, start replication for this volume.
         if volume.get("replication_settings"):
             self.start_replication(volume_id)
@@ -263,9 +287,41 @@ class StorageManager:
     def start_host_io(self, volume_id):
         """Simulate I/O operations for a volume using logger"""
         print(f"Host I/O started for volume {volume_id}")
+        
 
         def io_worker():
             try:
+                volumes = self.load_resource("volume")
+                volume = next((v for v in volumes if v["id"] == volume_id), None)
+
+                if volume and volume.get("is_exported", False):
+                    host_id = volume.get("exported_host_id", "Unknown")
+                    io_count = random.randint(800, 1200)
+                    latency = round(random.uniform(1.5, 8.0), 2)
+                    throughput = round(io_count * self.IO_SIZE_KB / 1024, 2)
+
+                    # ✅ Ensure io_metrics is only inside data_instance_5001
+                    metrics = self.load_resource("io_metrics")
+
+                    if not isinstance(metrics, list):
+                        metrics = []
+                    elif any(isinstance(m, list) for m in metrics):
+                        metrics = [item for sublist in metrics for item in (sublist if isinstance(sublist, list) else [sublist])]
+
+                    metrics = [m for m in metrics if isinstance(m, dict)]
+
+                    # ✅ Avoid duplicate entries for the same volume
+                    if not any(m.get("volume_id") == volume_id for m in metrics):
+                        metrics.append({
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "volume_id": volume_id,
+                            "host_id": host_id,
+                            "io_count": io_count,
+                            "latency": latency,
+                            "throughput": throughput
+                        })
+                        self.save_resource("io_metrics", metrics)
+
                 while True:
                     volumes = self.load_resource("volume")
                     volume = next((v for v in volumes if v["id"] == volume_id), None)
@@ -276,20 +332,14 @@ class StorageManager:
                     host_id = volume.get("exported_host_id", "Unknown")
                     io_count = random.randint(100, 1000)
                     latency = round(random.uniform(1.0, 10.0), 2)
-                    throughput = round(io_count / latency, 2)
+                    throughput = round(io_count * self.IO_SIZE_KB / 1024, 2)
 
-                    # Log using the logger (both local and global)
-                    log_message = (
-                        f"Volume: {volume_id}, Host: {host_id}, "
-                        f"IOPS: {io_count}, Latency: {latency}ms, Throughput: {throughput} MB/s"
-                    )
-                    if self.logger:
-                        self.logger.info(log_message, global_log=True)
-
-                    # Update metrics (renamed to io_metrics)
                     metrics = self.load_resource("io_metrics")
-                    if not isinstance(metrics, list):  
+                    if not isinstance(metrics, list):
                         metrics = []
+                    else :
+                        metrics = [m for sublist in metrics for m in (sublist if isinstance(sublist, list) else [sublist])]
+                        metrics = [m for m in metrics if isinstance(m, dict)]  # Ensure elements are dicts
 
                     metrics.append({
                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -301,13 +351,27 @@ class StorageManager:
                     })
                     self.save_resource("io_metrics", metrics)
 
+                    if self.logger:
+                        self.logger.info(
+                            f"Volume: {volume_id}, "
+                            f"Host: {host_id}, IOPS: {io_count}, Latency: {latency}ms, "
+                            f"Throughput: {throughput} MB/s"
+                        )
+
                     time.sleep(30)
             except Exception as e:
                 if self.logger:
                     self.logger.error(f"Host I/O error: {str(e)}", global_log=True)
 
+    
         worker_thread = threading.Thread(target=io_worker, daemon=True)
         worker_thread.start()
+        print(f"Background thread started for volume {volume_id}")  # Debug log
+
+
+
+
+
 
     def unexport_volume(self, volume_id, reason="Manual unexport"):
         """
@@ -331,6 +395,105 @@ class StorageManager:
         self.logger.info(f"Volume {volume_id} unexported: {reason}", global_log=True)
         self.update_resource("volume", volume_id, volume)
         return f"Volume {volume_id} unexported successfully"
+
+    def start_snapshot(self, volume_id, frequencies):
+        """Starts multiple snapshot processes for the same volume at different frequencies."""
+        print(f"📌 start_snapshot() called for volume {volume_id} with frequencies {frequencies} seconds.")
+
+        log_file_path = os.path.join(self.data_dir, "snapshot_log.txt")
+
+        # Ensure log file exists
+        if not os.path.exists(log_file_path):
+            print("📂 Creating snapshot_log.txt file...")
+            try:
+                with open(log_file_path, "w") as log_file:
+                    log_file.write("=== Snapshot Log Started ===\n")
+                print("✅ snapshot_log.txt created successfully!")
+            except Exception as e:
+                print(f"❌ ERROR: Could not create snapshot_log.txt: {e}")
+
+        def snapshot_worker(frequency):
+            """Worker function to take snapshots at a specific interval."""
+            while True:
+                volumes = self.load_resource("volume")
+                volume = next((v for v in volumes if v["id"] == volume_id), None)
+
+                if not volume:
+                    print(f"⚠️ Volume {volume_id} not found. Stopping snapshot process for {frequency} sec interval.")
+                    break  # Stop thread if volume is missing
+
+                # Initialize snapshot count if not set
+                if "snapshot_count" not in volume:
+                    volume["snapshot_count"] = 0
+
+                # Increment snapshot count
+                volume["snapshot_count"] += 1
+                self.update_resource("volume", volume_id, volume)
+
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                log_entry = f"[{timestamp}] 📸 Snapshot taken for volume {volume_id}, frequency {frequency} sec, total snapshots: {volume['snapshot_count']}\n"
+
+                # Append snapshot log
+                try:
+                    with open(log_file_path, "a") as log_file:
+                        log_file.write(log_entry)
+                    print(f"✅ Snapshot log updated: {log_entry.strip()}")
+                except Exception as e:
+                    print(f"❌ ERROR: Could not write to snapshot_log.txt: {e}")
+
+                time.sleep(frequency)
+
+        # Stop any existing snapshot threads for this volume
+        if volume_id in self.snapshot_threads:
+            print(f"🔄 Restarting snapshot process for volume {volume_id} with new frequencies: {frequencies} sec")
+            for freq in self.snapshot_threads[volume_id]:
+                self.snapshot_threads[volume_id][freq]["stop"] = True  # Signal all existing threads to stop
+            time.sleep(1)  # Give them time to stop
+
+        # Start new snapshot threads for each frequency
+        self.snapshot_threads[volume_id] = {}
+        for frequency in frequencies:
+            stop_flag = {"stop": False}
+            self.snapshot_threads[volume_id][frequency] = stop_flag
+            snapshot_thread = threading.Thread(target=snapshot_worker, args=(frequency,), daemon=True)
+            snapshot_thread.start()
+            print(f"🚀 Snapshot process started for volume {volume_id} at {frequency} sec intervals.")
+
+    def update_snapshot_in_settings(self, system_id, volume_id, snapshot_frequencies):
+        """Ensures multiple snapshot settings for a volume are stored in settings.json."""
+        file_path = os.path.join(self.data_dir, "settings.json")
+
+        # Ensure settings.json exists
+        if not os.path.exists(file_path):
+            print("📂 settings.json does not exist, creating a new file...")
+            with open(file_path, "w") as f:
+                json.dump([], f, indent=4)
+
+        settings = self.load_resource("settings")
+
+        # Find or create the system settings entry
+        system_setting = next((s for s in settings if s["system_id"] == system_id), None)
+
+        if not system_setting:
+            print(f"⚠️ No settings found for system {system_id}, creating a new entry.")
+            system_setting = {
+                "id": str(uuid.uuid4()),
+                "system_id": system_id,
+                "volume_snapshots": {}
+            }
+            settings.append(system_setting)
+
+        # Update snapshot settings for the volume (store multiple frequencies)
+        system_setting["volume_snapshots"][volume_id] = snapshot_frequencies
+
+        # Save changes
+        try:
+            with open(file_path, "w") as f:
+                json.dump(settings, f, indent=4)
+            print(f"✅ Snapshot settings updated for volume {volume_id} in system {system_id} with frequencies {snapshot_frequencies}")
+
+        except Exception as e:
+            raise Exception(f"⚠️ Failed to update snapshot settings: {str(e)}")
 
     def start_replication(self, volume_id):
         """
@@ -365,7 +528,7 @@ class StorageManager:
             # Get current replication settings
             current_settings = volume.get("replication_settings", [])
             current_target_ids = {s.get("replication_target", {}).get("id") for s in current_settings 
-                                if s.get("replication_target", {}).get("id") is not None}
+                                 if s.get("replication_target", {}).get("id") is not None}
 
             # Stop threads for removed targets
             for target_id in list(worker_threads.keys()):
@@ -415,7 +578,7 @@ class StorageManager:
         systems = self.load_resource("system")
         volume = next((v for v in volumes if v["id"] == volume_id), None)
         system = next((s for s in systems if s["id"] == volume.get("system_id")), None)
-
+ 
         if not volume or not system:
             self.logger.error(f"Source volume or system not found for replication", global_log=True)
             return
@@ -431,9 +594,9 @@ class StorageManager:
             volume = next((v for v in volumes if v["id"] == volume_id), None)
             if not volume or not volume.get("is_exported"):
                 break
-
-            delay_sec = rep_setting.get("delay_sec", 0)
             
+            delay_sec = rep_setting.get("delay_sec", 0)
+
             # Simulate replication throughput calculation.
             io_count = random.randint(50, 500)
             latency = round(random.uniform(1.0, 5.0), 2)
@@ -458,7 +621,7 @@ class StorageManager:
             )
 
             if should_log:
-                # Log sender replication event.
+                # Log sender replication event
                 if replication_type == "synchronous":
                     sender_log = (f"Active synchronous replication for volume {volume_id} "
                                 f"to target {target.get('name')} - "
@@ -486,11 +649,12 @@ class StorageManager:
                         "should_log": should_log,  # Tell target whether to log
                         "latency": latency,
                         "source_volume": {
-                            "id": volume["id"],
-                            "name": volume["name"],
-                            "size": volume["size"],
-                            "system_name": system["name"]
-                        }
+                             "id": volume["id"],
+                             "name": volume["name"],
+                             "size": volume["size"],
+                             "system_name": system["name"]
+                         }
+
                     }
                     response = requests.post(target_url, json=payload, timeout=5)
                     if response.status_code != 200:
@@ -564,6 +728,125 @@ class StorageManager:
             "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         self.save_replication_metrics(all_metrics)
+
+    MAX_SNAPSHOTS = 10  # Maximum number of snapshots per volume
+    IO_SIZE_KB = 8  # Assume each I/O operation is 8KB  
+
+    def cleanup(self):
+        """
+        Perform cleanup tasks:
+        - Remove oldest snapshots if they exceed MAX_SNAPSHOTS
+        - Update system throughput, CPU usage, and saturation correctly
+        """
+        try:
+            # Load system metrics
+            system_metrics = self.load_metrics()
+
+            # ---- 1️⃣ Fetch System Configuration ----
+            system_data = self.load_resource("system")  # Load system.json
+            if not system_data:
+                self.logger.warn("No system found. Skipping cleanup.", global_log=True)
+                return
+
+            system = system_data[0]  # Assuming single system instance
+            max_capacity_gb = float(system.get("max_capacity", 1024))  # Default fallback of 1TB
+            max_throughput_mb = float(system.get("max_throughput", 200))  # Default fallback
+
+            # ---- 2️⃣ Clean Excess Snapshots ----
+            volumes = self.load_resource("volume")
+            cleaned_snapshots = 0
+
+            for volume in volumes:
+                snapshot_count = volume.get("snapshot_count", 0)  # Get snapshot count from volume JSON
+                
+                # ✅ Check if cleanup is needed
+                if snapshot_count > self.MAX_SNAPSHOTS:
+                    excess_count = snapshot_count - self.MAX_SNAPSHOTS
+                    
+                    # ✅ Update snapshot count in the volume
+                    volume["snapshot_count"] = self.MAX_SNAPSHOTS  # Set to limit after cleanup
+                    self.update_resource("volume", volume["id"], volume)
+                    cleaned_snapshots += excess_count
+
+            # ---- 3️⃣ Track Hosts & System IOPS ----
+            hosts = self.load_resource("host")
+            num_hosts = len(hosts)
+
+            # ✅ Load IOPS dynamically from io_metrics.json
+            io_metrics = self.load_resource("io_metrics")
+
+            # ✅ Ensure io_metrics is a list
+            if not isinstance(io_metrics, list):
+                io_metrics = []  
+
+            # ✅ Flatten nested lists inside io_metrics
+            flat_metrics = []
+            for entry in io_metrics:
+                if isinstance(entry, list):  
+                    for sub_entry in entry:
+                        if isinstance(sub_entry, list):  
+                            flat_metrics.extend(sub_entry)  # Extract deeply nested lists
+                        else:
+                            flat_metrics.append(sub_entry)  # Append valid dict
+                elif isinstance(entry, dict):
+                    flat_metrics.append(entry)  # Append standalone dicts
+
+            io_metrics = flat_metrics  # ✅ Now io_metrics is a clean flat list
+
+
+            # ✅ Initialize total IOPS and total throughput
+            total_iops = 0
+            total_throughput = 0
+
+            for volume in volumes:
+                if volume.get("is_exported"):
+                    # ✅ Fetch the latest IOPS for the volume from io_metrics
+                    latest_metrics = next((m for m in reversed(io_metrics) if isinstance(m, dict) and m.get("volume_id") == volume["id"]), None)
+                    iops = latest_metrics.get("io_count", 1000) if latest_metrics else 1000
+
+
+                    total_iops += iops
+                    total_throughput += (iops * self.IO_SIZE_KB) / 1024  # Convert KB to MB
+
+
+            total_throughput = min(max_throughput_mb, total_throughput)
+
+            if max_throughput_mb > 0:
+                if total_throughput > 0:
+                    system_saturation = max(4, (total_throughput * 100) / max_throughput_mb)
+                else:
+                    if any(v.get("is_exported") for v in volumes):
+                        system_saturation = 4
+                    else:
+                        system_saturation = 0
+            else:
+                system_saturation = 0
+
+            system_metrics["saturation"] = system_saturation
+            system_metrics["cpu_usage"] = min(100, num_hosts * 5)
+            system_metrics["throughput_used"] = total_throughput
+
+            prev_saturation = system_metrics["saturation"]
+
+            for volume in volumes:
+                if not volume.get("is_exported"):
+                    # Reduce saturation proportionally instead of fixed - 5
+                    system_metrics["saturation"] = max(0, prev_saturation - (total_throughput * 100) / max_throughput_mb)
+                    system_metrics["cpu_usage"] = max(0, system_metrics["cpu_usage"] - 5)
+
+
+            self.save_metrics(system_metrics)
+
+            self.logger.info(
+                f"Housekeeping completed: {cleaned_snapshots} snapshots removed, "
+                f"IOPS: {total_iops}, Saturation: {system_metrics['saturation']}%, "
+                f"Throughput: {total_throughput} MB/s, "
+                f"CPU Usage: {system_metrics['cpu_usage']}%", 
+                global_log=True
+            )
+
+        except Exception as e:
+            self.logger.error(f"Housekeeping error: {str(e)}", global_log=True)
 
 class Settings:
     def __init__(self, id, system_id):
