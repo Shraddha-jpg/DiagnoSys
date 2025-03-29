@@ -577,7 +577,6 @@ class StorageManager:
         volumes = self.load_resource("volume")
         systems = self.load_resource("system")
         volume = next((v for v in volumes if v["id"] == volume_id), None)
-        
         system = next((s for s in systems if s["id"] == volume.get("system_id")), None)
  
         if not volume or not system:
@@ -655,6 +654,7 @@ class StorageManager:
                              "size": volume["size"],
                              "system_name": system["name"]
                          }
+
                     }
                     response = requests.post(target_url, json=payload, timeout=5)
                     if response.status_code != 200:

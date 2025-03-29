@@ -492,6 +492,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
     <button class="sidebar-toggle" id="sidebar-toggle">
@@ -805,12 +806,14 @@
         <h2><i class="fas fa-chart-line section-icon"></i> Exported Volumes - Latency Over Last 15 Minutes</h2>
         <div id="exportedVolumesCharts"></div>
     </div>
+
     
     <!-- <div class="card" id="top-latency-card">
              <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 3 Volumes by Latency (Last 15 Min)</h2>
              <ul id="topLatencyList"></ul>
          </div>-->
     
+
     <div class="card" id="top-latency-card">
         <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 3 Volumes by Latency (Last 15 Min)</h2>
         <div id="topLatencyTableContainer">
@@ -916,6 +919,7 @@
              updateCharts();
              setInterval(updateCharts, 60000); // Update every minute
          </script> -->
+
     <script>
         async function fetchLatencyData() {
             const response = await fetch('/api/latency');
@@ -936,6 +940,7 @@
                 return;
             }
 
+
             Object.keys(latencyData).forEach(volumeId => {
                 const volumeData = latencyData[volumeId];
                 if (!volumeData.timestamps || !volumeData.values) return; // Skip if missing data
@@ -947,6 +952,7 @@
                          <canvas id="chart-${volumeId}"></canvas>
                      `;
                 exportedVolumesDiv.appendChild(chartContainer);
+
 
                 const ctx = document.getElementById(`chart-${volumeId}`).getContext('2d');
                 new Chart(ctx, {
@@ -965,10 +971,12 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
+
                             x: {
                                 title: {
                                     display: true,
                                     text: 'Time'
+
                                 },
                                 ticks: {
                                     maxTicksLimit: 10
@@ -978,6 +986,7 @@
                                 title: {
                                     display: true,
                                     text: 'Latency (ms)'
+
                                 },
                                 beginAtZero: true
                             }
@@ -1693,5 +1702,7 @@
             loadExportedVolumes();
         };
     </script>
+
+
 </body>
 </html>
