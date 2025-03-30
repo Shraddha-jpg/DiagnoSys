@@ -19,6 +19,11 @@ class StorageManager:
         # ✅ Initialize snapshot_threads (Now supports multiple frequencies per volume)
         self.snapshot_threads = {}
 
+        # Initialize cleanup thread
+        self.cleanup_thread = None
+        self.cleanup_stop = False
+        self.start_cleanup_thread()
+
         if not os.path.exists(self.global_file) or os.stat(self.global_file).st_size == 0:
             with open(self.global_file, "w") as f:
                 json.dump([], f, indent=4)
@@ -31,6 +36,11 @@ class StorageManager:
 
         # Dictionary to keep track of ongoing replication tasks (one per volume)
         self.replication_tasks = {}
+
+        # Add these class constants at the start of __init__
+        self.IO_SIZE_KB = 8  # Default I/O size in KB
+        self.FIXED_IOPS = 2000  # Fixed IOPS for all volumes
+        self.IO_SIZE_OPTIONS = [4, 8, 16, 32, 64, 128]  # Valid I/O sizes in KB
 
     def get_port(self):
         return self.data_dir.split('_')[-1]
@@ -131,14 +141,39 @@ class StorageManager:
     def delete_resource(self, resource_type, resource_id):
         file_path = os.path.join(self.data_dir, f"{resource_type}.json")
         existing_data = self.load_resource(resource_type)
+        
+        # Log the current state before deletion
+        self.logger.info(f"Attempting to delete {resource_type} with ID: {resource_id}", global_log=True)
+        self.logger.info(f"Current {resource_type} count before deletion: {len(existing_data)}", global_log=True)
+        
         if resource_id is None:
             existing_data = []
         else:
+            # Log the specific resource being deleted
+            resource_to_delete = next((item for item in existing_data if item["id"] == resource_id), None)
+            if resource_to_delete:
+                self.logger.info(f"Found {resource_type} to delete: {resource_to_delete}", global_log=True)
+            else:
+                self.logger.warn(f"No {resource_type} found with ID: {resource_id}", global_log=True)
+            
+            # Filter out the resource to delete
             existing_data = [item for item in existing_data if item["id"] != resource_id]
+            
+            # Verify deletion
+            if any(item["id"] == resource_id for item in existing_data):
+                self.logger.error(f"Failed to remove {resource_type} with ID: {resource_id}", global_log=True)
+                raise Exception(f"Failed to delete {resource_type}: Resource still exists after deletion")
+        
         try:
             with open(file_path, "w") as f:
                 json.dump(existing_data, f, indent=4)
+            
+            # Log the final state after deletion
+            self.logger.info(f"Successfully deleted {resource_type} with ID: {resource_id}", global_log=True)
+            self.logger.info(f"Final {resource_type} count after deletion: {len(existing_data)}", global_log=True)
+            
         except Exception as e:
+            self.logger.error(f"Failed to delete {resource_type}: {str(e)}", global_log=True)
             raise Exception(f"Failed to delete {resource_type}: {str(e)}")
     
     def remove_system_from_global(self, system_id):
@@ -277,7 +312,7 @@ class StorageManager:
         # Start background tasks: host I/O, snapshots, and replication.
         self.start_host_io(volume_id)
         if volume.get("snapshot_settings"):
-            self.start_snapshot(volume_id, frequencies=volume["snapshot_settings"].get("frequencies", [60]))
+            self.start_snapshot(volume_id, frequencies=volume["snapshot_settings"].get("frequencies", []))
         # If replication settings exist, start replication for this volume.
         if volume.get("replication_settings"):
             self.start_replication(volume_id)
@@ -406,21 +441,20 @@ class StorageManager:
         if not os.path.exists(log_file_path):
             print("📂 Creating snapshot_log.txt file...")
             try:
-                with open(log_file_path, "w") as log_file:
-                    log_file.write("=== Snapshot Log Started ===\n")
+                with open(log_file_path, "w") as f:
+                    f.write("=== Snapshot Log Started ===\n")
                 print("✅ snapshot_log.txt created successfully!")
             except Exception as e:
                 print(f"❌ ERROR: Could not create snapshot_log.txt: {e}")
 
         def snapshot_worker(frequency):
-            """Worker function to take snapshots at a specific interval."""
             while True:
                 volumes = self.load_resource("volume")
                 volume = next((v for v in volumes if v["id"] == volume_id), None)
 
                 if not volume:
                     print(f"⚠️ Volume {volume_id} not found. Stopping snapshot process for {frequency} sec interval.")
-                    break  # Stop thread if volume is missing
+                    break
 
                 # Initialize snapshot count if not set
                 if "snapshot_count" not in volume:
@@ -430,12 +464,39 @@ class StorageManager:
                 volume["snapshot_count"] += 1
                 self.update_resource("volume", volume_id, volume)
 
+                # Create a new snapshot entry with size information
+                snapshot_id = str(uuid.uuid4())
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                log_entry = f"[{timestamp}] 📸 Snapshot taken for volume {volume_id}, frequency {frequency} sec, total snapshots: {volume['snapshot_count']}\n"
+                
+                # Find the corresponding snapshot setting ID for this frequency
+                setting_id = None
+                for sid, freq in volume.get("snapshot_settings", {}).items():
+                    if freq == frequency:
+                        setting_id = sid
+                        break
 
-                # Append snapshot log
+                if setting_id:
+                    snapshot = {
+                        "id": snapshot_id,
+                        "volume_id": volume_id,
+                        "snapshot_setting_id": setting_id,
+                        "created_at": timestamp,
+                        "frequency": frequency,
+                        "size": volume.get("size", 0)  # Add size information from parent volume
+                    }
+                    
+                    # Save the snapshot to snapshots.json
+                    self.save_resource("snapshots", snapshot)
+                    
+                    # Update system metrics to reflect new capacity
+                    self.update_system_metrics()
+                    
+                    log_entry = f"[{timestamp}] 📸 Snapshot {snapshot_id} taken for volume {volume_id}, frequency {frequency} sec, size {snapshot['size']} GB, total snapshots: {volume['snapshot_count']}\n"
+                else:
+                    log_entry = f"[{timestamp}] ⚠️ No matching snapshot setting found for frequency {frequency} sec\n"
+
                 try:
-                    with open(log_file_path, "a") as log_file:
+                    with open(log_file_path, 'a', encoding='utf-8') as log_file:
                         log_file.write(log_entry)
                     print(f"✅ Snapshot log updated: {log_entry.strip()}")
                 except Exception as e:
@@ -728,125 +789,335 @@ class StorageManager:
             "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         self.save_replication_metrics(all_metrics)
-
+    '''
+    
     MAX_SNAPSHOTS = 10  # Maximum number of snapshots per volume
-    IO_SIZE_KB = 8  # Assume each I/O operation is 8KB  
+    IO_SIZE_KB = 8  # Assume each I/O operation is 8KB  '
+    '''
 
-    def cleanup(self):
+    def start_cleanup_thread(self):
+        """Start the background cleanup thread."""
+        def cleanup_worker():
+            while not self.cleanup_stop:
+                try:
+                    self.cleanup()
+                except Exception as e:
+                    self.logger.error(f"Error in cleanup thread: {str(e)}", global_log=True)
+                time.sleep(30)  # Run cleanup every 30 seconds
+
+        self.cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
+        self.cleanup_thread.start()
+        self.logger.info("Started background cleanup thread", global_log=True)
+
+    def stop_cleanup_thread(self):
+        """Stop the background cleanup thread."""
+        self.cleanup_stop = True
+        if self.cleanup_thread:
+            self.cleanup_thread.join(timeout=1)
+            self.logger.info("Stopped background cleanup thread", global_log=True)
+
+    def calculate_latency(self, system_metrics):
         """
-        Perform cleanup tasks:
-        - Remove oldest snapshots if they exceed MAX_SNAPSHOTS
-        - Update system throughput, CPU usage, and saturation correctly
+        Calculate latency based on system saturation and capacity usage percentages.
+        Returns latency in milliseconds.
+        """
+        # Get current saturation and capacity usage percentages
+        saturation_pct = system_metrics.get("saturation", 0)
+        
+        # Calculate capacity usage percentage
+        system = self.load_resource("system")[0]  # Get first system
+        max_capacity = float(system.get("max_capacity", 1024))  # Default 1TB
+        current_capacity = system_metrics.get("capacity_used", 0)
+        capacity_pct = (current_capacity / max_capacity) * 100 if max_capacity > 0 else 0
+
+        # Use the higher of saturation or capacity percentage to determine latency
+        highest_pct = max(saturation_pct, capacity_pct)
+
+        # Default latency is 1ms
+        if highest_pct <= 70:
+            return 1.0
+        elif 70 < highest_pct <= 80:
+            return 2.0
+        elif 80 < highest_pct <= 90:
+            return 3.0
+        elif 90 < highest_pct <= 100:
+            return 4.0
+        else:
+            return 5.0
+
+    def calculate_volume_throughput(self, volume):
+        """
+        Calculate throughput for a volume based on IOPS and I/O size.
+        Returns throughput in MB/s.
+        """
+        FIXED_IOPS = 2000  # Fixed IOPS for all volumes
+        io_size_kb = volume.get("workload_size", 4)  # Default to 4KB if not specified
+        
+        # Convert KB to MB and calculate throughput
+        throughput_mb = (FIXED_IOPS * io_size_kb) / 1024
+        return throughput_mb
+
+    def update_system_metrics(self):
+        """
+        Update system metrics including throughput, capacity, and saturation.
         """
         try:
-            # Load system metrics
-            system_metrics = self.load_metrics()
-
-            # ---- 1️⃣ Fetch System Configuration ----
-            system_data = self.load_resource("system")  # Load system.json
-            if not system_data:
-                self.logger.warn("No system found. Skipping cleanup.", global_log=True)
-                return
-
-            system = system_data[0]  # Assuming single system instance
-            max_capacity_gb = float(system.get("max_capacity", 1024))  # Default fallback of 1TB
-            max_throughput_mb = float(system.get("max_throughput", 200))  # Default fallback
-
-            # ---- 2️⃣ Clean Excess Snapshots ----
+            # Load current system and volumes
+            system = self.load_resource("system")[0]
             volumes = self.load_resource("volume")
-            cleaned_snapshots = 0
-
-            for volume in volumes:
-                snapshot_count = volume.get("snapshot_count", 0)  # Get snapshot count from volume JSON
-                
-                # ✅ Check if cleanup is needed
-                if snapshot_count > self.MAX_SNAPSHOTS:
-                    excess_count = snapshot_count - self.MAX_SNAPSHOTS
-                    
-                    # ✅ Update snapshot count in the volume
-                    volume["snapshot_count"] = self.MAX_SNAPSHOTS  # Set to limit after cleanup
-                    self.update_resource("volume", volume["id"], volume)
-                    cleaned_snapshots += excess_count
-
-            # ---- 3️⃣ Track Hosts & System IOPS ----
-            hosts = self.load_resource("host")
-            num_hosts = len(hosts)
-
-            # ✅ Load IOPS dynamically from io_metrics.json
-            io_metrics = self.load_resource("io_metrics")
-
-            # ✅ Ensure io_metrics is a list
-            if not isinstance(io_metrics, list):
-                io_metrics = []  
-
-            # ✅ Flatten nested lists inside io_metrics
-            flat_metrics = []
-            for entry in io_metrics:
-                if isinstance(entry, list):  
-                    for sub_entry in entry:
-                        if isinstance(sub_entry, list):  
-                            flat_metrics.extend(sub_entry)  # Extract deeply nested lists
-                        else:
-                            flat_metrics.append(sub_entry)  # Append valid dict
-                elif isinstance(entry, dict):
-                    flat_metrics.append(entry)  # Append standalone dicts
-
-            io_metrics = flat_metrics  # ✅ Now io_metrics is a clean flat list
-
-
-            # ✅ Initialize total IOPS and total throughput
-            total_iops = 0
+            snapshots = self.load_resource("snapshots")
+            
+            # Get system limits
+            max_throughput_mb = float(system.get("max_throughput", 200))
+            max_capacity_gb = float(system.get("max_capacity", 1024))
+            
+            # Calculate total throughput from exported volumes
             total_throughput = 0
-
             for volume in volumes:
                 if volume.get("is_exported"):
-                    # ✅ Fetch the latest IOPS for the volume from io_metrics
-                    latest_metrics = next((m for m in reversed(io_metrics) if isinstance(m, dict) and m.get("volume_id") == volume["id"]), None)
-                    iops = latest_metrics.get("io_count", 1000) if latest_metrics else 1000
-
-
-                    total_iops += iops
-                    total_throughput += (iops * self.IO_SIZE_KB) / 1024  # Convert KB to MB
-
-
-            total_throughput = min(max_throughput_mb, total_throughput)
-
-            if max_throughput_mb > 0:
-                if total_throughput > 0:
-                    system_saturation = max(4, (total_throughput * 100) / max_throughput_mb)
-                else:
-                    if any(v.get("is_exported") for v in volumes):
-                        system_saturation = 4
-                    else:
-                        system_saturation = 0
-            else:
-                system_saturation = 0
-
-            system_metrics["saturation"] = system_saturation
-            system_metrics["cpu_usage"] = min(100, num_hosts * 5)
-            system_metrics["throughput_used"] = total_throughput
-
-            prev_saturation = system_metrics["saturation"]
-
-            for volume in volumes:
-                if not volume.get("is_exported"):
-                    # Reduce saturation proportionally instead of fixed - 5
-                    system_metrics["saturation"] = max(0, prev_saturation - (total_throughput * 100) / max_throughput_mb)
-                    system_metrics["cpu_usage"] = max(0, system_metrics["cpu_usage"] - 5)
-
-
-            self.save_metrics(system_metrics)
-
+                    total_throughput += self.calculate_volume_throughput(volume)
+            
+            # Calculate total capacity usage (volumes + snapshots)
+            volume_capacity = sum(float(v.get("size", 0)) for v in volumes)
+            snapshot_capacity = sum(float(s.get("size", 0)) for s in snapshots)
+            total_capacity = volume_capacity + snapshot_capacity
+            
+            # Calculate capacity percentage
+            capacity_pct = (total_capacity / max_capacity_gb * 100) if max_capacity_gb > 0 else 0
+            
+            # Calculate saturation percentage
+            saturation = (total_throughput / max_throughput_mb * 100) if max_throughput_mb > 0 else 0
+            
+            # Update system metrics
+            metrics = {
+                "throughput_used": total_throughput,
+                "capacity_used": total_capacity,
+                "saturation": saturation,
+                "cpu_usage": min(100, saturation),  # CPU usage correlates with saturation
+                "volume_capacity": volume_capacity,
+                "snapshot_capacity": snapshot_capacity,  # Track snapshot capacity separately
+                "capacity_percentage": capacity_pct
+            }
+            
+            # Calculate new latency based on updated metrics
+            current_latency = self.calculate_latency(metrics)
+            metrics["current_latency"] = current_latency
+            
+            self.save_metrics(metrics)
+            
+            # Log the metrics update with more detailed information
             self.logger.info(
-                f"Housekeeping completed: {cleaned_snapshots} snapshots removed, "
-                f"IOPS: {total_iops}, Saturation: {system_metrics['saturation']}%, "
-                f"Throughput: {total_throughput} MB/s, "
-                f"CPU Usage: {system_metrics['cpu_usage']}%", 
+                f"System metrics updated - "
+                f"Throughput: {total_throughput:.2f} MB/s, "
+                f"Volume Capacity: {volume_capacity:.2f} GB, "
+                f"Snapshot Capacity: {snapshot_capacity:.2f} GB, "
+                f"Total Capacity: {total_capacity:.2f} GB ({capacity_pct:.1f}%), "
+                f"Saturation: {saturation:.2f}%, "
+                f"Latency: {current_latency:.2f}ms",
                 global_log=True
             )
 
         except Exception as e:
+            self.logger.error(f"Failed to update system metrics: {str(e)}", global_log=True)
+
+    def cleanup(self):
+        """
+        Perform cleanup tasks:
+        - Remove oldest snapshots if they exceed max_snapshots for each snapshot setting
+        - Update system capacity after snapshot removal
+        - Update system throughput, CPU usage, and saturation correctly
+        """
+        self.logger.cleanup_log(f"Starting cleanup process")
+
+        try:
+            # Load necessary data
+            system_data = self.load_resource("system")
+            if not system_data:
+                self.logger.warn("No system found. Skipping cleanup.", global_log=True)
+                return
+
+            system = system_data[0]
+            settings = self.load_resource("settings")
+            settings_dict = {s["id"]: s for s in settings}
+
+            # Track capacity changes
+            initial_capacity = self.load_metrics().get("capacity_used", 0)
+            capacity_freed = 0
+
+            volumes = self.load_resource("volume")
+            cleaned_snapshots = 0
+            cleanup_summary = {}
+
+            for volume in volumes:
+                volume_id = volume["id"]
+                snapshot_count = volume.get("snapshot_count", 0)
+                volume_snapshot_settings = volume.get("snapshot_settings", {})
+
+                cleanup_summary[volume_id] = {}
+
+                for setting_id, frequency in volume_snapshot_settings.items():
+                    setting = settings_dict.get(setting_id)
+                    if not setting or setting["type"] != "snapshot":
+                        continue
+                    
+                    max_snapshots = setting.get("max_snapshots", 10)
+                    
+                    # Fetch snapshots for this specific setting
+                    snapshots = self.load_resource("snapshots")
+                    snapshots_for_setting = [s for s in snapshots if s.get("snapshot_setting_id") == setting_id]
+                    
+                    num_snapshots_for_setting = len(snapshots_for_setting)
+                    self.logger.info(
+                        f"Volume {volume_id}, Setting {setting_id}: "
+                        f"Current snapshots: {num_snapshots_for_setting}, Max allowed: {max_snapshots}", 
+                        global_log=True
+                    )
+
+                    if num_snapshots_for_setting > max_snapshots:
+                        excess_count = num_snapshots_for_setting - max_snapshots
+                        self.logger.cleanup_log(
+                            f"Volume {volume_id} with setting {setting_id} "
+                            f"has {excess_count} excess snapshots (max: {max_snapshots})."
+                        )
+
+                        # Sort snapshots by creation date (oldest first)
+                        snapshots_for_setting.sort(key=lambda x: x["created_at"])
+
+                        # Delete the excess snapshots
+                        for i in range(excess_count):
+                            if i < len(snapshots_for_setting):
+                                snapshot_to_delete = snapshots_for_setting[i]
+                                try:
+                                    # Track capacity being freed
+                                    snapshot_size = float(snapshot_to_delete.get("size", 0))
+                                    capacity_freed += snapshot_size
+
+                                    # Delete the snapshot
+                                    self.delete_resource("snapshots", snapshot_to_delete["id"])
+                                    cleaned_snapshots += 1
+                                    
+                                    cleanup_msg = (
+                                        f"Snapshot {snapshot_to_delete['id']} removed for setting {setting_id} "
+                                        f"in volume {volume_id} (freed {snapshot_size} GB)"
+                                    )
+                                    self.logger.cleanup_log(cleanup_msg)
+                                    
+                                    if setting_id not in cleanup_summary[volume_id]:
+                                        cleanup_summary[volume_id][setting_id] = 0
+                                    cleanup_summary[volume_id][setting_id] += 1
+
+                                    # Verify deletion
+                                    snapshots_after = self.load_resource("snapshots")
+                                    if any(s["id"] == snapshot_to_delete["id"] for s in snapshots_after):
+                                        self.logger.error(
+                                            f"Failed to delete snapshot {snapshot_to_delete['id']}", 
+                                            global_log=True
+                                        )
+                                    else:
+                                        self.logger.info(
+                                            f"Successfully deleted snapshot {snapshot_to_delete['id']} "
+                                            f"and freed {snapshot_size} GB", 
+                                            global_log=True
+                                        )
+                                except Exception as e:
+                                    self.logger.error(
+                                        f"Error deleting snapshot {snapshot_to_delete['id']}: {str(e)}", 
+                                        global_log=True
+                                    )
+
+                        # Update the snapshot count in the volume
+                        volume["snapshot_count"] = min(snapshot_count, max_snapshots)
+                        self.update_resource("volume", volume_id, volume)
+
+            # Log cleanup summary
+            for volume_id, settings in cleanup_summary.items():
+                for setting_id, count in settings.items():
+                    summary_msg = (
+                        f"Cleanup Summary - Volume {volume_id}, Setting {setting_id}: "
+                        f"Removed {count} snapshots"
+                    )
+                    self.logger.cleanup_log(summary_msg)
+
+            # Update system metrics after cleanup
+            self.update_system_metrics()
+
+            # Log final capacity changes
+            final_capacity = self.load_metrics().get("capacity_used", 0)
+            self.logger.cleanup_log(
+                f"Capacity changes after cleanup:\n"
+                f"- Initial: {initial_capacity:.2f} GB\n"
+                f"- Freed: {capacity_freed:.2f} GB\n"
+                f"- Final: {final_capacity:.2f} GB"
+            )
+
+            # Log cleanup results with detailed summary
+            cleanup_result_msg = (
+                f"Housekeeping completed:\n"
+                f"- Total snapshots removed: {cleaned_snapshots}\n"
+                f"- Capacity freed: {capacity_freed:.2f} GB\n"
+                f"- Current system metrics:\n"
+                f"  - Capacity: {final_capacity:.2f} GB\n"
+                f"  - Saturation: {self.load_metrics().get('saturation', 0):.2f}%\n"
+                f"  - Latency: {self.load_metrics().get('current_latency', 1.0):.2f}ms"
+            )
+            self.logger.cleanup_log(cleanup_result_msg)
+
+        except Exception as e:
             self.logger.error(f"Housekeeping error: {str(e)}", global_log=True)
+
+    def delete_volume(self, volume_id):
+        """
+        Delete a volume and all its associated snapshots.
+        """
+        try:
+            # First, cleanup any running processes for the volume
+            self.cleanup_volume_processes(volume_id, reason="Volume deletion")
+            
+            # Load and delete all snapshots associated with this volume
+            snapshots = self.load_resource("snapshots")
+            volume_snapshots = [s for s in snapshots if s["volume_id"] == volume_id]
+            
+            # Log the number of snapshots to be deleted
+            self.logger.info(
+                f"Deleting volume {volume_id} and its {len(volume_snapshots)} associated snapshots",
+                global_log=True
+            )
+            
+            # Delete each snapshot
+            capacity_freed = 0
+            for snapshot in volume_snapshots:
+                try:
+                    snapshot_size = float(snapshot.get("size", 0))
+                    capacity_freed += snapshot_size
+                    self.delete_resource("snapshots", snapshot["id"])
+                    self.logger.info(
+                        f"Deleted snapshot {snapshot['id']} for volume {volume_id} (freed {snapshot_size} GB)",
+                        global_log=True
+                    )
+                except Exception as e:
+                    self.logger.error(
+                        f"Error deleting snapshot {snapshot['id']}: {str(e)}",
+                        global_log=True
+                    )
+
+            # Now delete the volume itself
+            self.delete_resource("volume", volume_id)
+            
+            # Update system metrics after deletion
+            self.update_system_metrics()
+            
+            # Log the total capacity freed
+            self.logger.info(
+                f"Volume {volume_id} and its snapshots deleted successfully. "
+                f"Total capacity freed: {capacity_freed:.2f} GB",
+                global_log=True
+            )
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to delete volume {volume_id}: {str(e)}", global_log=True)
+            raise
 
 class Settings:
     def __init__(self, id, system_id):

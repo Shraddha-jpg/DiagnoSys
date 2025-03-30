@@ -23,6 +23,8 @@ class Logger:
         with self.lock:
             with open(file_path, 'a') as f:
                 f.write(f"{prefix}{message}\n")
+                f.flush()  # Force the buffer to write to disk immediately
+
 
     def info(self, message, global_log=False):
         timestamp = self._get_timestamp()
@@ -54,11 +56,19 @@ class Logger:
     def cleanup_log(self, message):
         """
         Special logging for cleanup events.
+        Writes to both regular logs and snapshot logs.
         """
         timestamp = self._get_timestamp()
         log_entry = f"[{timestamp}][CLEANUP] {message}"
+        
+        # Write to regular logs
         self._write_log(self.local_log_file, log_entry)
         self._write_log(self.global_log_file, log_entry)
+        
+        # Write to snapshot logs if the message contains snapshot-related information
+        if "snapshot" in message.lower():
+            snapshot_log_file = os.path.join(os.path.dirname(self.local_log_file), "snapshot_log.txt")
+            self._write_log(snapshot_log_file, log_entry)
 
 
     def get_local_logs(self, last_n_lines=100):
