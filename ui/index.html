@@ -1188,9 +1188,16 @@
 
         function updateDropdown(resource, selectId, idField, nameField) {
             const select = document.getElementById(selectId);
+            // Store currently selected value before updating
+            const currentValue = select.value;
+            
             select.innerHTML = '<option value="">Select...</option>';
             fetch(`/data/${resource}`).then(res => res.json()).then(data => {
                 if (data.length === 0) return;
+                
+                // Flag to check if current value still exists in data
+                let currentValueExists = false;
+                
                 data.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item[idField];
@@ -1199,15 +1206,28 @@
                     } else {
                         option.text = `${item[nameField]} (ID: ${item[idField]})`;
                     }
+                    
+                    // Set option as selected if it matches the previously selected value
+                    if (currentValue && item[idField] === currentValue) {
+                        option.selected = true;
+                        currentValueExists = true;
+                    }
+                    
                     select.appendChild(option);
                 });
-                if (selectId === 'node_system_id') checkNodeFormVisibility();
-                if (selectId === 'volume_system_id') checkVolumeFormVisibility();
-                if (selectId === 'settings_system_id') checkSettingsFormVisibility();
-                if (selectId === 'node_id') checkNodeActionVisibility();
-                if (selectId === 'volume_id') checkVolumeActionVisibility();
-                if (selectId === 'host_id') checkHostActionVisibility();
-                if (selectId === 'settings_id') checkSettingsActionVisibility();
+                
+                // Only trigger visibility checks if selection changed
+                const selectionChanged = (currentValue !== select.value);
+                
+                if (selectionChanged) {
+                    if (selectId === 'node_system_id') checkNodeFormVisibility();
+                    if (selectId === 'volume_system_id') checkVolumeFormVisibility();
+                    if (selectId === 'settings_system_id') checkSettingsFormVisibility();
+                    if (selectId === 'node_id') checkNodeActionVisibility();
+                    if (selectId === 'volume_id') checkVolumeActionVisibility();
+                    if (selectId === 'host_id') checkHostActionVisibility();
+                    if (selectId === 'settings_id') checkSettingsActionVisibility();
+                }
             });
         }
 
@@ -1421,7 +1441,13 @@
                 .then(res => res.json())
                 .then(data => { 
                     showResponse(data); 
-                    updateDropdown('volume', 'volume_id', 'id', 'name'); 
+                    // Update all volume dropdowns
+                    updateDropdown('volume', 'volume_id', 'id', 'name');
+                    updateDropdown('volume', 'export_volume_id', 'id', 'name');
+                    
+                    // Clear the input fields for next use
+                    document.getElementById('volume_name').value = '';
+                    document.getElementById('volume_size').value = '';
                 });
         }
 
@@ -1461,8 +1487,13 @@
                 .then(res => res.json())
                 .then(data => {
                     alert("Host created");
+                    // Update all host dropdowns
                     updateDropdown('host', 'host_id', 'id', 'name');
+                    updateDropdown('host', 'export_host_id', 'id', 'name');
                     document.getElementById('host-id-container').style.display = 'block';
+                    
+                    // Clear the input fields for next use
+                    document.getElementById('host_name').value = '';
                 });
         }
 
@@ -1501,10 +1532,15 @@
         function createSetting() {
             const name = document.getElementById('setting_name').value;
             const type = document.getElementById('setting_type').value;
+            
+            // Get the hidden system ID
             const systemId = document.getElementById('settings_system_id').value;
 
-            if (!name || !type || !systemId) 
+            if (!name || !type) 
                 return alert("Fill all required fields");
+            
+            if (!systemId)
+                return alert("No system exists. Please create a system first.");
 
             const data = {
                 name, 
@@ -1551,6 +1587,15 @@
                     alert(data.error);
                 } else {
                     alert(data.message || "Setting created");
+                    // Update settings dropdown
+                    updateDropdown('settings', 'settings_id', 'id', 'system_id');
+                    
+                    // Clear the input fields for next use
+                    document.getElementById('setting_name').value = '';
+                    document.getElementById('setting_value').value = '';
+                    if (type === 'snapshot') {
+                        document.getElementById('max_snapshots').value = '';
+                    }
                 }
             });
         }
@@ -1623,7 +1668,13 @@
             if (!volumeId) return alert("Select a volume");
             fetch('/unexport-volume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ volume_id: volumeId }) })
                 .then(res => res.json())
-                .then(data => { alert(data.message || "Unexported"); loadExportedVolumes(); });
+                .then(data => { 
+                    alert(data.message || "Unexported"); 
+                    loadExportedVolumes(); 
+                    // Update volume dropdowns after unexport to reflect availability
+                    updateDropdown('volume', 'volume_id', 'id', 'name');
+                    updateDropdown('volume', 'export_volume_id', 'id', 'name');
+                });
         }
 
         function handleReplicationType() {
@@ -1641,6 +1692,12 @@
 
         function loadAvailableTargets() {
             const currentSystemId = document.getElementById('settings_system_id').value;
+            
+            if (!currentSystemId) {
+                console.warn("No current system ID found");
+                return;
+            }
+            
             fetch('/all-systems')
                 .then(res => res.json())
                 .then(systems => {
@@ -1751,6 +1808,8 @@
 
         function updateAvailableSettings(allSettings) {
             const select = document.getElementById('new-setting-select');
+            const currentValue = select.value; // Store current value
+            
             select.innerHTML = '<option value="">Select setting to add...</option>';
             
             allSettings.forEach(setting => {
@@ -1758,6 +1817,12 @@
                     const option = document.createElement('option');
                     option.value = setting.id;
                     option.text = `${setting.name} (${setting.type})`;
+                    
+                    // Restore selection if possible
+                    if (setting.id === currentValue) {
+                        option.selected = true;
+                    }
+                    
                     select.appendChild(option);
                 }
             });
@@ -1897,6 +1962,38 @@
                     select.appendChild(option);
                 });
             }).catch(err => console.error('Error loading replication targets:', err));
+
+            // Add user interaction tracking variables
+            let lastUserInteraction = Date.now();
+            const userInteractionEvents = ['click', 'keydown', 'mousemove', 'touchstart'];
+            
+            // Update last interaction time on user activity
+            userInteractionEvents.forEach(event => {
+                document.addEventListener(event, () => {
+                    lastUserInteraction = Date.now();
+                });
+            });
+
+            // Set up periodic refresh of dropdowns - only if user has been inactive
+            setInterval(function() {
+                const now = Date.now();
+                const inactiveTime = now - lastUserInteraction;
+                
+                // Only refresh if user has been inactive for at least 3 seconds
+                if (inactiveTime > 3000) {
+                    if (document.getElementById('volume-card').style.display !== 'none') {
+                        updateDropdown('volume', 'volume_id', 'id', 'name');
+                        updateDropdown('volume', 'export_volume_id', 'id', 'name');
+                    }
+                    if (document.getElementById('host-card').style.display !== 'none') {
+                        updateDropdown('host', 'host_id', 'id', 'name');
+                        updateDropdown('host', 'export_host_id', 'id', 'name');
+                    }
+                    if (document.getElementById('settings-card').style.display !== 'none') {
+                        updateDropdown('settings', 'settings_id', 'id', 'system_id');
+                    }
+                }
+            }, 15000); // Refresh every 15 seconds instead of 5
         };
 
         function handleVolumeSelection() {
@@ -1915,7 +2012,9 @@
 
         // Add new function to handle adding a setting from the dropdown
         function addSelectedSetting() {
-            const settingId = document.getElementById('new-setting-select').value;
+            const settingSelect = document.getElementById('new-setting-select');
+            const settingId = settingSelect.value;
+            
             if (!settingId) {
                 alert("Please select a setting to add");
                 return;
@@ -1929,7 +2028,9 @@
                     if (setting) {
                         addSettingBlock(setting);
                         currentVolumeSettings.add(settingId);
-                        // Update dropdown to remove the selected setting
+                        // Clear the selection after adding
+                        settingSelect.value = "";
+                        // Update dropdown to remove the added setting
                         updateAvailableSettings(allSettings);
                     }
                 });
