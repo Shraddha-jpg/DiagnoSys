@@ -19,10 +19,10 @@ class StorageManager:
         # ✅ Initialize snapshot_threads (Now supports multiple frequencies per volume)
         self.snapshot_threads = {}
 
-        # Initialize cleanup thread
+        # Initialize cleanup thread related attributes, but don't start it yet
         self.cleanup_thread = None
         self.cleanup_stop = False
-        self.start_cleanup_thread()
+        # self.start_cleanup_thread() # Removed from here
 
         if not os.path.exists(self.global_file) or os.stat(self.global_file).st_size == 0:
             with open(self.global_file, "w") as f:
@@ -927,15 +927,16 @@ class StorageManager:
         - Update system capacity after snapshot removal
         - Update system throughput, CPU usage, and saturation correctly
         """
-        self.logger.cleanup_log(f"Starting cleanup process")
+        # Check if a system exists before proceeding
+        system_data = self.load_resource("system")
+        if not system_data:
+            # self.logger.warn("No system found. Skipping cleanup.", global_log=True) # Optional: Log only if needed for debugging
+            return # Don't log or proceed if no system exists
+
+        self.logger.cleanup_log(f"Starting cleanup process for system {system_data[0]['id']}")
 
         try:
             # Load necessary data
-            system_data = self.load_resource("system")
-            if not system_data:
-                self.logger.warn("No system found. Skipping cleanup.", global_log=True)
-                return
-
             system = system_data[0]
             settings = self.load_resource("settings")
             settings_dict = {s["id"]: s for s in settings}

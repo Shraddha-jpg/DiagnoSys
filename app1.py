@@ -75,6 +75,9 @@ def create_system():
         storage_mgr.save_metrics({"throughput_used": 0, "capacity_used": 0})
         logger.info(f"System created with ID: {system_id}", global_log=True)
 
+        # Start the cleanup thread only after system creation
+        storage_mgr.start_cleanup_thread()
+
         return jsonify({"system_id": system.id, "port": PORT}), 201
 
     except Exception as e:

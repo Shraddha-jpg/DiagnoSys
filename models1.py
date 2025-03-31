@@ -1,16 +1,13 @@
 import re
 
 class System:
-    def __init__(self, id, name, max_throughput=200, max_capacity=1024, saturation=0, cpu_usage=0, 
-                 remote_replication=False, replication_target=None):
+    def __init__(self, id, name, max_throughput=200, max_capacity=1024, saturation=0, cpu_usage=0):
         self.id = id
         self.name = name
         self.max_throughput = max_throughput  # MBPS
         self.max_capacity = max_capacity      # GB
         self.saturation = saturation  # System saturation percentage
         self.cpu_usage = cpu_usage    # CPU usage percentage
-        self.remote_replication = remote_replication  # Remote replication flag
-        self.replication_target = replication_target  # Target system for replication
 
     def to_dict(self):
         return {
@@ -19,9 +16,7 @@ class System:
             "max_throughput": self.max_throughput,
             "max_capacity": self.max_capacity,
             "saturation": self.saturation,
-            "cpu_usage": self.cpu_usage,
-            "remote_replication": self.remote_replication,
-            "replication_target": self.replication_target
+            "cpu_usage": self.cpu_usage
         }
 
 

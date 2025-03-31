@@ -581,9 +581,14 @@
                     <h3>Applied Settings</h3>
                     <div id="applied-settings-list" style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0;"></div>
                     
-                    <!-- Checkboxes for selecting new settings -->
-                    <div id="new-settings-container" style="margin: 10px 0; display: flex; flex-wrap: wrap; gap: 10px;">
-                        <!-- Checkboxes will be dynamically inserted here -->
+                    <!-- Replace checkboxes with dropdown -->
+                    <div style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
+                        <select id="new-setting-select" style="flex-grow: 1;">
+                            <option value="">Select setting to add...</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="addSelectedSetting()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
                     </div>
                 
                     <div style="margin-top: 10px;">
@@ -910,7 +915,10 @@
      
                  const chartContainer = document.createElement('div');
                  chartContainer.className = 'chart-container';
-                 chartContainer.innerHTML = `<h3>Volume ID: ${volumeId}</h3><canvas id="chart-${volumeId}"></canvas>`;
+                 chartContainer.innerHTML = `
+                         <h3>Volume ID: ${volumeId}</h3>
+                         <canvas id="chart-${volumeId}"></canvas>
+                     `;
                  exportedVolumesDiv.appendChild(chartContainer);
                  
                  const ctx = document.getElementById(`chart-${volumeId}`).getContext('2d');
@@ -1129,7 +1137,6 @@
             document.getElementById('create-volume-btn').style.display = visible ? 'inline' : 'none';
             if (visible) {
                 updateDropdown('volume', 'volume_id', 'id', 'name');
-                updateSettingsCheckboxes();
                 document.getElementById('volume-id-container').style.display = 'block';
             } else {
                 document.getElementById('volume-id-container').style.display = 'none';
@@ -1144,18 +1151,6 @@
             
             if (visible) {
                 showVolumeSettings(volumeId);
-                fetch('/data/all-settings')
-                    .then(res => res.json())
-                    .then(settings => {
-                        const select = document.getElementById('new-setting-select');
-                        select.innerHTML = '<option value="">Select setting to add...</option>';
-                        settings.forEach(setting => {
-                            const option = document.createElement('option');
-                            option.value = setting.id;
-                            option.text = `${setting.name} (${setting.type})`;
-                            select.appendChild(option);
-                        });
-                    });
             } else {
                 document.getElementById('applied-settings-container').style.display = 'none';
             }
@@ -1408,7 +1403,6 @@
             alert(data.error);
         } else {
             alert(data.message || "Setting created");
-            updateSettingsCheckboxes();
         }
     });
 }
@@ -1437,12 +1431,6 @@
             }
         });
 
-        //function getSettings() {
-            //const settingsId = document.getlementById('settings_id').value;
-            //if (!settingsId) return showResponse({ error: "Settings ID required" });
-            //etch(`/settings/${settingsId}`).then(res => res.json()).then(showResponse);
-        //}
-
         function updateSettings() {
             const settingsId = document.getElementById('settings_id').value;
             if (!settingsId) return showResponse({ error: "Settings ID required" });
@@ -1450,42 +1438,6 @@
                 .then(res => res.json())
                 .then(showResponse);
         }
-
-        function updateSettingsCheckboxes() {
-    fetch('/data/all-settings')
-        .then(res => res.json())
-        .then(settings => {
-            const container = document.getElementById('new-settings-container');
-            if (!container) {
-                console.error("❌ ERROR: new-settings-container not found in the DOM.");
-                return;
-            }
-
-            container.innerHTML = ""; // Clear previous checkboxes
-
-            settings.forEach(setting => {
-                const label = document.createElement('label');
-                label.style.display = "block";
-
-                const checkbox = document.createElement('input');
-                checkbox.type = "checkbox";
-                checkbox.value = setting.id;
-                checkbox.name = "settings";
-                checkbox.id = `setting-${setting.id}`;
-
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(` ${setting.name} (${setting.type}, ${setting.value})`));
-
-                container.appendChild(label);
-            });
-
-            console.log("✅ Checkboxes added:", settings);
-        })
-        .catch(error => {
-            console.error("❌ Failed to fetch settings:", error);
-        });
-}
-
 
         function deleteSettings() {
             const settingsId = document.getElementById('settings_id').value;
@@ -1562,15 +1514,22 @@
             const type = document.getElementById('setting_type').value;
             const valueContainer = document.getElementById('value-container');
             const replicationControls = document.getElementById('replication-controls');
+            const maxSnapshotsContainer = document.getElementById('max-snapshots-container'); // Get the container
             
             if (type === 'replication') {
                 valueContainer.style.display = 'none';
                 replicationControls.style.display = 'block';
+                maxSnapshotsContainer.style.display = 'none'; // Hide for replication
                 loadAvailableTargets();
                 handleReplicationType();
+            } else if (type === 'snapshot') {
+                valueContainer.style.display = 'block';
+                replicationControls.style.display = 'none';
+                maxSnapshotsContainer.style.display = 'block'; // Show for snapshot
             } else {
                 valueContainer.style.display = 'block';
                 replicationControls.style.display = 'none';
+                maxSnapshotsContainer.style.display = 'none'; // Hide for other types if any
             }
         }
 
@@ -1658,48 +1617,36 @@
         }
 
         function updateVolumeSettings() {
-    const volumeId = document.getElementById('volume_id').value;
-    if (!volumeId) {
-        alert("⚠️ Volume ID is missing!");
-        return;
-    }
+            const volumeId = document.getElementById('volume_id').value;
+            if (!volumeId) {
+                alert("⚠️ Volume ID is missing!");
+                return;
+            }
 
-    // Collect all selected checkboxes
-    const selectedSettings = Array.from(document.querySelectorAll("#new-settings-container input:checked"))
-        .map(checkbox => checkbox.value);
-
-    console.log("📌 Selected Settings:", selectedSettings);
-
-    if (selectedSettings.length === 0) {
-        alert("⚠️ No settings selected.");
-        return;
-    }
-
-    // Ensure currentVolumeSettings is updated correctly
-    selectedSettings.forEach(setting => currentVolumeSettings.add(setting));
-
-    fetch(`/volume/${volumeId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            setting_ids: Array.from(currentVolumeSettings)
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            showVolumeSettings(volumeId);
-            alert('✅ Settings updated successfully!');
+            console.log("📌 Current Settings:", Array.from(currentVolumeSettings));
+            
+            // Send the update even if there are no settings (to clear all settings)
+            fetch(`/volume/${volumeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    setting_ids: Array.from(currentVolumeSettings)
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    showVolumeSettings(volumeId);
+                    alert('✅ Settings updated successfully!');
+                }
+            })
+            .catch(err => {
+                console.error("❌ ERROR updating settings:", err);
+                alert("❌ Failed to update settings.");
+            });
         }
-    })
-    .catch(err => {
-        console.error("❌ ERROR updating settings:", err);
-        alert("❌ Failed to update settings.");
-    });
-}
-
 
         function showLogs() {
             document.getElementById('logs-modal').style.display = 'block';
@@ -1768,9 +1715,7 @@
                 if (data.length > 0) document.getElementById('host-id-container').style.display = 'block';
                 updateDropdown('host', 'host_id', 'id', 'name');
             });
-            updateSettingsCheckboxes();
             loadExportedVolumes();
-
         };
 
 
@@ -1785,58 +1730,30 @@
     }
 
     console.log(`✅ Volume selected: ${settingsId}`);
-    getSettings(settingsId);
+    showVolumeSettings(settingsId);
 }
 
-function getSettings(settingsId) {
-    console.log("📌 Fetching settings for:", settingsId);
-
-    fetch(`/settings/`)
+// Add new function to handle adding a setting from the dropdown
+function addSelectedSetting() {
+    const settingId = document.getElementById('new-setting-select').value;
+    if (!settingId) {
+        alert("Please select a setting to add");
+        return;
+    }
+    
+    // Fetch the setting details and add it to the UI
+    fetch('/data/all-settings')
         .then(res => res.json())
-        .then(data => {
-            console.log("✅ Received Settings Data:", data);
-
-            if (!Array.isArray(data) || data.length === 0) {
-                console.warn("⚠ No settings found.");
-                return;
+        .then(allSettings => {
+            const setting = allSettings.find(s => s.id === settingId);
+            if (setting) {
+                addSettingBlock(setting);
+                currentVolumeSettings.add(settingId);
+                // Update dropdown to remove the selected setting
+                updateAvailableSettings(allSettings);
             }
-
-            const newSettingsContainer = document.getElementById("new-settings-container");
-
-            if (!newSettingsContainer) {
-                console.error("❌ ERROR: #new-settings-container not found!");
-                return;
-            }
-
-            newSettingsContainer.innerHTML = ""; // Clear existing checkboxes
-
-            data.forEach(setting => {
-                console.log("📌 Adding setting:", setting);
-
-                const label = document.createElement("label");
-                label.style.display = "block";
-
-                const checkbox = document.createElement("input");
-                checkbox.type = "checkbox";
-                checkbox.value = setting.id;
-                checkbox.name = "settings";
-                checkbox.id = `setting-${setting.id}`;
-
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(` ${setting.name}`));
-
-                newSettingsContainer.appendChild(label);
-            });
-
-            console.log("✅ Checkboxes inserted successfully.");
-        })
-        .catch(err => console.error("❌ Fetch Error:", err));
+        });
 }
-
     </script>
-
-
-
-
 </body>
 </html>
