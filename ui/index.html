@@ -490,6 +490,38 @@
             color: var(--danger);
             font-weight: 500;
         }
+
+        /* Add these styles in the style section */
+        .fault-button {
+            position: fixed;
+            top: 20px;
+            right: 150px; /* Position it to the left of the logs button */
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 10px 15px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 999;
+            transition: var(--transition);
+        }
+
+        .fault-button:hover {
+            background: #e95757;
+            transform: translateY(-2px);
+        }
+
+        /* ... existing styles ... */
+        
+        .warning-message {
+            color: #856404;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -561,9 +593,8 @@
             <!-- Volume -->
             <div class="card" id="volume-card">
                 <h2><i class="fas fa-hdd section-icon"></i> Volume</h2>
-                <div class="form-control">
-                    <label for="volume_system_id">Select System</label>
-                    <select id="volume_system_id" onchange="checkVolumeFormVisibility()"></select>
+                <div class="form-control" id="volume-no-system-message">
+                    <p class="warning-message">Please create a system first to manage volumes.</p>
                 </div>
                 <div class="form-control initially-hidden" id="volume-name-container">
                     <label for="volume_name">Volume Name</label>
@@ -647,9 +678,8 @@
             <!-- Host -->
             <div class="card" id="host-card">
                 <h2><i class="fas fa-network-wired section-icon"></i> Host</h2>
-                <div class="form-control">
-                    <label for="host_system_id">Select System</label>
-                    <select id="host_system_id" onchange="checkHostFormVisibility()"></select>
+                <div class="form-control" id="host-no-system-message">
+                    <p class="warning-message">Please create a system first to manage hosts.</p>
                 </div>
                 <div class="form-control initially-hidden" id="host-name-container">
                     <label for="host_name">Host Name</label>
@@ -741,9 +771,8 @@
             <!-- Settings -->
             <div class="card" id="settings-card">
                 <h2><i class="fas fa-cog section-icon"></i> Settings</h2>
-                <div class="form-control">
-                    <label for="settings_system_id">Select System</label>
-                    <select id="settings_system_id" onchange="checkSettingsFormVisibility()"></select>
+                <div class="form-control" id="settings-no-system-message">
+                    <p class="warning-message">Please create a system first to manage settings.</p>
                 </div>
                 <div class="form-control initially-hidden" id="settings-id-container">
                     <label for="settings_id">Select Settings</label>
@@ -815,6 +844,59 @@
     <button class="logs-button" onclick="showLogs()">
         <i class="fas fa-list-alt"></i> Show Logs
     </button>
+
+    <button class="fault-button" onclick="showFaultInjection()">
+        <i class="fas fa-bolt"></i> Fault Injection
+    </button>
+    
+    <div id="fault-modal" class="logs-modal">
+        <h2><i class="fas fa-bolt section-icon"></i> Replication Link Fault Injection</h2>
+        <div class="form-section">
+            <div class="form-control">
+                <label for="fault-target-system">Select System Link:</label>
+                <select id="fault-target-system" required>
+                    <option value="">Select target system...</option>
+                </select>
+                <small>Only systems with synchronously replicated volumes are shown.</small>
+            </div>
+            <div class="form-control">
+                <label for="fault-sleep-time">Sleep Time (ms):</label>
+                <input type="number" id="fault-sleep-time" min="1" value="100" required>
+                <small>Additional delay in milliseconds for synchronous replication operations.</small>
+            </div>
+            <div class="form-control">
+                <label for="fault-duration">Fault Duration (seconds):</label>
+                <input type="number" id="fault-duration" min="0" value="0">
+                <small>Duration in seconds (0 = permanent, until volumes unexported).</small>
+            </div>
+            <div class="crud-buttons">
+                <button class="btn btn-danger" onclick="injectFault()">
+                    <i class="fas fa-bolt"></i> Inject Fault
+                </button>
+                <button class="btn" onclick="closeFaultInjection()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+        
+        <div id="active-faults-container" style="margin-top: 20px; display: none;">
+            <h3>Active Faults</h3>
+            <div class="table-container">
+                <table class="latency-table">
+                    <thead>
+                        <tr>
+                            <th>Target System</th>
+                            <th>Sleep Time (ms)</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-faults-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
     <div id="logs-modal" class="logs-modal">
         <h2><i class="fas fa-list-alt section-icon"></i> System Logs</h2>
         <div class="logs-tabs">
@@ -1130,17 +1212,23 @@
         }
 
         function checkVolumeFormVisibility() {
-            const systemId = document.getElementById('volume_system_id').value;
-            const visible = systemId;
-            document.getElementById('volume-name-container').style.display = visible ? 'block' : 'none';
-            document.getElementById('volume-size-container').style.display = visible ? 'block' : 'none';
-            document.getElementById('create-volume-btn').style.display = visible ? 'inline' : 'none';
-            if (visible) {
-                updateDropdown('volume', 'volume_id', 'id', 'name');
-                document.getElementById('volume-id-container').style.display = 'block';
-            } else {
-                document.getElementById('volume-id-container').style.display = 'none';
-            }
+            fetch('/data/system').then(res => res.json()).then(systems => {
+                const visible = systems && systems.length > 0;
+                const systemId = visible ? systems[0].id : '';
+                
+                document.getElementById('volume-no-system-message').style.display = visible ? 'none' : 'block';
+                document.getElementById('volume-name-container').style.display = visible ? 'block' : 'none';
+                document.getElementById('volume-size-container').style.display = visible ? 'block' : 'none';
+                document.getElementById('create-volume-btn').style.display = visible ? 'inline' : 'none';
+                
+                if (visible) {
+                    document.getElementById('volume_system_id').value = systemId; // Hidden field for reference
+                    updateDropdown('volume', 'volume_id', 'id', 'name');
+                    document.getElementById('volume-id-container').style.display = 'block';
+                } else {
+                    document.getElementById('volume-id-container').style.display = 'none';
+                }
+            });
         }
 
         function checkVolumeActionVisibility() {
@@ -1157,26 +1245,32 @@
         }
 
         function checkHostFormVisibility() {
-            const systemId = document.getElementById('host_system_id').value;
-            const visible = systemId;
-            document.getElementById('host-name-container').style.display = visible ? 'block' : 'none';
-            document.getElementById('application-type-container').style.display = visible ? 'block' : 'none';
-            document.getElementById('protocol-container').style.display = visible ? 'block' : 'none';
-            document.getElementById('create-host-btn').style.display = visible ? 'inline' : 'none';
-            if (visible) {
-                fetch('/data/host').then(res => res.json()).then(data => {
-                    const filtered = data.filter(host => host.system_id === systemId);
-                    if (filtered.length > 0) {
-                        updateDropdown('host', 'host_id', 'id', 'name');
-                        document.getElementById('host-id-container').style.display = 'block';
-                    } else {
-                        document.getElementById('host_id').innerHTML = '<option value="">No hosts</option>';
-                        document.getElementById('host-id-container').style.display = 'none';
-                    }
-                });
-            } else {
-                document.getElementById('host-id-container').style.display = 'none';
-            }
+            fetch('/data/system').then(res => res.json()).then(systems => {
+                const visible = systems && systems.length > 0;
+                const systemId = visible ? systems[0].id : '';
+                
+                document.getElementById('host-no-system-message').style.display = visible ? 'none' : 'block';
+                document.getElementById('host-name-container').style.display = visible ? 'block' : 'none';
+                document.getElementById('application-type-container').style.display = visible ? 'block' : 'none';
+                document.getElementById('protocol-container').style.display = visible ? 'block' : 'none';
+                document.getElementById('create-host-btn').style.display = visible ? 'inline' : 'none';
+                
+                if (visible) {
+                    document.getElementById('host_system_id').value = systemId; // Hidden field for reference
+                    fetch('/data/host').then(res => res.json()).then(data => {
+                        const filtered = data.filter(host => host.system_id === systemId);
+                        if (filtered.length > 0) {
+                            updateDropdown('host', 'host_id', 'id', 'name');
+                            document.getElementById('host-id-container').style.display = 'block';
+                        } else {
+                            document.getElementById('host_id').innerHTML = '<option value="">No hosts</option>';
+                            document.getElementById('host-id-container').style.display = 'none';
+                        }
+                    });
+                } else {
+                    document.getElementById('host-id-container').style.display = 'none';
+                }
+            });
         }
 
         function checkHostActionVisibility() {
@@ -1192,16 +1286,22 @@
         }
 
         function checkSettingsFormVisibility() {
-            const systemId = document.getElementById('settings_system_id').value;
-            const visible = systemId;
-            document.getElementById('create-settings-btn').style.display = visible ? 'inline' : 'none';
-            document.getElementById('setting-details-container').style.display = visible ? 'block' : 'none';
-            if (visible) {
-                updateDropdown('settings', 'settings_id', 'id', 'system_id');
-                document.getElementById('settings-id-container').style.display = 'block';
-            } else {
-                document.getElementById('settings-id-container').style.display = 'none';
-            }
+            fetch('/data/system').then(res => res.json()).then(systems => {
+                const visible = systems && systems.length > 0;
+                const systemId = visible ? systems[0].id : '';
+                
+                document.getElementById('settings-no-system-message').style.display = visible ? 'none' : 'block';
+                document.getElementById('create-settings-btn').style.display = visible ? 'inline' : 'none';
+                document.getElementById('setting-details-container').style.display = visible ? 'block' : 'none';
+                
+                if (visible) {
+                    document.getElementById('settings_system_id').value = systemId; // Hidden field for reference
+                    updateDropdown('settings', 'settings_id', 'id', 'system_id');
+                    document.getElementById('settings-id-container').style.display = 'block';
+                } else {
+                    document.getElementById('settings-id-container').style.display = 'none';
+                }
+            });
         }
 
         function checkSettingsActionVisibility() {
@@ -1213,24 +1313,38 @@
         }
 
         function createSystem() {
-    const maxThroughput = document.getElementById('max_throughput').value;
-    const maxCapacity = document.getElementById('max_capacity').value;
-    
-    fetch('/system', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-            max_throughput: maxThroughput,
-            max_capacity: maxCapacity
-        }) 
-    })
+            const maxThroughput = document.getElementById('max_throughput').value;
+            const maxCapacity = document.getElementById('max_capacity').value;
+            
+            fetch('/system', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ 
+                    max_throughput: maxThroughput,
+                    max_capacity: maxCapacity
+                }) 
+            })
                 .then(res => res.json())
                 .then(data => {
                     showResponse(data);
-                    updateDropdown('system', 'node_system_id', 'id', 'name');
-                    updateDropdown('system', 'volume_system_id', 'id', 'name');
-                    updateDropdown('system', 'settings_system_id', 'id', 'name');
-                    updateDropdown('system', 'host_system_id', 'id', 'name');
+                    
+                    // Set system ID to hidden fields
+                    if (data.id) {
+                        document.getElementById('volume_system_id').value = data.id;
+                        document.getElementById('host_system_id').value = data.id;
+                        document.getElementById('settings_system_id').value = data.id;
+                        
+                        // Hide no-system messages
+                        document.getElementById('volume-no-system-message').style.display = 'none';
+                        document.getElementById('host-no-system-message').style.display = 'none';
+                        document.getElementById('settings-no-system-message').style.display = 'none';
+                    }
+                    
+                    // Update form visibility
+                    checkVolumeFormVisibility();
+                    checkHostFormVisibility();
+                    checkSettingsFormVisibility();
+                    
                     document.getElementById('update-system-btn').style.display = 'inline';
                     document.getElementById('delete-system-btn').style.display = 'inline';
                 });
@@ -1255,37 +1369,60 @@
         function deleteSystem() {
             fetch('/system', { method: 'DELETE' }).then(() => {
                 showResponse({ message: "System deleted" });
+                
+                // Clear hidden system ID fields
+                document.getElementById('volume_system_id').value = '';
+                document.getElementById('host_system_id').value = '';
+                document.getElementById('settings_system_id').value = '';
+                
+                // Show no-system messages
+                document.getElementById('volume-no-system-message').style.display = 'block';
+                document.getElementById('host-no-system-message').style.display = 'block';
+                document.getElementById('settings-no-system-message').style.display = 'block';
+                
+                // Hide all forms
+                document.getElementById('volume-name-container').style.display = 'none';
+                document.getElementById('volume-size-container').style.display = 'none';
+                document.getElementById('create-volume-btn').style.display = 'none';
+                document.getElementById('volume-id-container').style.display = 'none';
+                
+                document.getElementById('host-name-container').style.display = 'none';
+                document.getElementById('application-type-container').style.display = 'none';
+                document.getElementById('protocol-container').style.display = 'none';
+                document.getElementById('create-host-btn').style.display = 'none';
+                document.getElementById('host-id-container').style.display = 'none';
+                
+                document.getElementById('create-settings-btn').style.display = 'none';
+                document.getElementById('setting-details-container').style.display = 'none';
+                document.getElementById('settings-id-container').style.display = 'none';
+                
                 document.getElementById('update-system-btn').style.display = 'none';
                 document.getElementById('delete-system-btn').style.display = 'none';
-                updateDropdown('system', 'node_system_id', 'id', 'name');
-                updateDropdown('system', 'volume_system_id', 'id', 'name');
-                updateDropdown('system', 'settings_system_id', 'id', 'name');
-                updateDropdown('system', 'host_system_id', 'id', 'name');
             });
         }
 
         function createVolume() {
             const system_id = document.getElementById('volume_system_id').value;
             const name = document.getElementById('volume_name').value;
-    const size = document.getElementById('volume_size').value;
-    
+            const size = document.getElementById('volume_size').value;
+            
             if (!system_id || !name) return showResponse({ error: "System ID and Volume name required" });
-    if (!size) return showResponse({ error: "Volume size is required" });
-    
-    fetch('/volume', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-            system_id, 
-            name,
-            size: parseInt(size)
-        }) 
-    })
+            if (!size) return showResponse({ error: "Volume size is required" });
+            
+            fetch('/volume', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ 
+                    system_id, 
+                    name,
+                    size: parseInt(size)
+                }) 
+            })
                 .then(res => res.json())
-    .then(data => { 
-        showResponse(data); 
-        updateDropdown('volume', 'volume_id', 'id', 'name'); 
-    });
+                .then(data => { 
+                    showResponse(data); 
+                    updateDropdown('volume', 'volume_id', 'id', 'name'); 
+                });
         }
 
         function getVolume() {
@@ -1308,8 +1445,19 @@
             const name = document.getElementById('host_name').value;
             const applicationType = document.getElementById('application_type').value;
             const protocol = document.getElementById('protocol').value;
-            if (!systemId) return alert("Select a system");
-            fetch('/host', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system_id: systemId, name, application_type: applicationType, protocol }) })
+            
+            if (!systemId) return alert("No system available. Please create a system first.");
+            
+            fetch('/host', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ 
+                    system_id: systemId, 
+                    name, 
+                    application_type: applicationType, 
+                    protocol 
+                }) 
+            })
                 .then(res => res.json())
                 .then(data => {
                     alert("Host created");
@@ -1351,62 +1499,61 @@
         }
 
         function createSetting() {
-    const name = document.getElementById('setting_name').value;
-    const type = document.getElementById('setting_type').value;
-    const systemId = document.getElementById('settings_system_id').value;
+            const name = document.getElementById('setting_name').value;
+            const type = document.getElementById('setting_type').value;
+            const systemId = document.getElementById('settings_system_id').value;
 
-    if (!name || !type || !systemId) 
-        return alert("Fill all required fields");
+            if (!name || !type || !systemId) 
+                return alert("Fill all required fields");
 
-    const data = {
-        name, 
-        type, 
-        system_id: systemId
-    };
+            const data = {
+                name, 
+                type, 
+                system_id: systemId
+            };
 
-    if (type === 'replication') {
-        const replicationType = document.getElementById('replication_type').value;
-        const delaySec = parseInt(document.getElementById('delay_sec').value);
-        const targetId = document.getElementById('replication_target').value;
-        const targetName = document.getElementById('replication_target').selectedOptions[0].text;
+            if (type === 'replication') {
+                const replicationType = document.getElementById('replication_type').value;
+                const delaySec = parseInt(document.getElementById('delay_sec').value);
+                const targetId = document.getElementById('replication_target').value;
+                const targetName = document.getElementById('replication_target').selectedOptions[0].text;
 
-        if (!targetId) return alert("Select a target system");
-        if (replicationType === 'asynchronous' && delaySec <= 0) 
-            return alert("Delay must be greater than 0 for asynchronous replication");
+                if (!targetId) return alert("Select a target system");
+                if (replicationType === 'asynchronous' && delaySec <= 0) 
+                    return alert("Delay must be greater than 0 for asynchronous replication");
 
-        data.replication_type = replicationType;
-        data.delay_sec = delaySec;
-        data.replication_target_id = targetId;
-        data.replication_target_name = targetName;
-    } else {
-        const value = document.getElementById('setting_value').value;
-        if (!value) return alert("Setting value is required");
-        data.value = value;
+                data.replication_type = replicationType;
+                data.delay_sec = delaySec;
+                data.replication_target_id = targetId;
+                data.replication_target_name = targetName;
+            } else {
+                const value = document.getElementById('setting_value').value;
+                if (!value) return alert("Setting value is required");
+                data.value = value;
 
-        // ✅ Add max_snapshots if type is snapshot
-        if (type === 'snapshot') {
-            const maxSnapshots = parseInt(document.getElementById('max_snapshots').value);
-            if (!maxSnapshots || maxSnapshots <= 0) 
-                return alert("Max snapshots must be greater than 0");
-            data.max_snapshots = maxSnapshots;
+                // ✅ Add max_snapshots if type is snapshot
+                if (type === 'snapshot') {
+                    const maxSnapshots = parseInt(document.getElementById('max_snapshots').value);
+                    if (!maxSnapshots || maxSnapshots <= 0) 
+                        return alert("Max snapshots must be greater than 0");
+                    data.max_snapshots = maxSnapshots;
+                }
+            }
+
+            fetch('/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message || "Setting created");
+                }
+            });
         }
-    }
-
-    fetch('/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            alert(data.error);
-        } else {
-            alert(data.message || "Setting created");
-        }
-    });
-}
-
 
         function loadGlobalSystems() {
             fetch('/data/global-systems').then(res => res.json()).then(systems => {
@@ -1701,59 +1848,269 @@
             });
         });
 
-        window.onload = () => {
+        window.onload = function() {
+            // Create hidden fields for system IDs
+            const hiddenFields = ['volume_system_id', 'host_system_id', 'settings_system_id'];
+            hiddenFields.forEach(id => {
+                if (!document.getElementById(id)) {
+                    const hiddenField = document.createElement('input');
+                    hiddenField.type = 'hidden';
+                    hiddenField.id = id;
+                    document.body.appendChild(hiddenField);
+                }
+            });
+            
+            // Check system existence and update all forms
             fetch('/data/system').then(res => res.json()).then(systems => {
                 if (systems.length > 0) {
-                    updateDropdown('system', 'volume_system_id', 'id', 'name');
-                    updateDropdown('system', 'settings_system_id', 'id', 'name');
-                    updateDropdown('system', 'host_system_id', 'id', 'name');
+                    const systemId = systems[0].id;
+                    hiddenFields.forEach(id => {
+                        document.getElementById(id).value = systemId;
+                    });
+                    
+                    // Update all form visibility
+                    checkVolumeFormVisibility();
+                    checkHostFormVisibility();
+                    checkSettingsFormVisibility();
+                    
+                    // Update other dropdowns
                     updateDropdown('volume', 'export_volume_id', 'id', 'name');
                     updateDropdown('host', 'export_host_id', 'id', 'name');
                 }
             });
+            
+            // Load other data
             fetch('/data/host').then(res => res.json()).then(data => {
                 if (data.length > 0) document.getElementById('host-id-container').style.display = 'block';
                 updateDropdown('host', 'host_id', 'id', 'name');
             });
             loadExportedVolumes();
+            
+            // Also update fault system dropdown
+            fetch('/data/replication-targets').then(res => res.json()).then(data => {
+                const select = document.getElementById('fault-target-system');
+                select.innerHTML = '<option value="">Select target system...</option>';
+                data.forEach(target => {
+                    const option = document.createElement('option');
+                    option.value = target.id;
+                    option.textContent = `${target.name} (ID: ${target.id})`;
+                    select.appendChild(option);
+                });
+            }).catch(err => console.error('Error loading replication targets:', err));
         };
 
-
         function handleVolumeSelection() {
-    const settingsId = document.getElementById("settings_id")?.value;
-    const container = document.getElementById("applied-settings-container");
+            const settingsId = document.getElementById("settings_id")?.value;
+            const container = document.getElementById("applied-settings-container");
 
-    if (!settingsId) {
-        console.warn("⚠ No volume selected. Hiding settings.");
-        container.style.display = "none";
-        return;
-    }
-
-    console.log(`✅ Volume selected: ${settingsId}`);
-    showVolumeSettings(settingsId);
-}
-
-// Add new function to handle adding a setting from the dropdown
-function addSelectedSetting() {
-    const settingId = document.getElementById('new-setting-select').value;
-    if (!settingId) {
-        alert("Please select a setting to add");
-        return;
-    }
-    
-    // Fetch the setting details and add it to the UI
-    fetch('/data/all-settings')
-        .then(res => res.json())
-        .then(allSettings => {
-            const setting = allSettings.find(s => s.id === settingId);
-            if (setting) {
-                addSettingBlock(setting);
-                currentVolumeSettings.add(settingId);
-                // Update dropdown to remove the selected setting
-                updateAvailableSettings(allSettings);
+            if (!settingsId) {
+                console.warn("⚠ No volume selected. Hiding settings.");
+                container.style.display = "none";
+                return;
             }
-        });
-}
+
+            console.log(`✅ Volume selected: ${settingsId}`);
+            showVolumeSettings(settingsId);
+        }
+
+        // Add new function to handle adding a setting from the dropdown
+        function addSelectedSetting() {
+            const settingId = document.getElementById('new-setting-select').value;
+            if (!settingId) {
+                alert("Please select a setting to add");
+                return;
+            }
+            
+            // Fetch the setting details and add it to the UI
+            fetch('/data/all-settings')
+                .then(res => res.json())
+                .then(allSettings => {
+                    const setting = allSettings.find(s => s.id === settingId);
+                    if (setting) {
+                        addSettingBlock(setting);
+                        currentVolumeSettings.add(settingId);
+                        // Update dropdown to remove the selected setting
+                        updateAvailableSettings(allSettings);
+                    }
+                });
+        }
+
+        function showFaultInjection() {
+            document.getElementById('fault-modal').style.display = 'block';
+            loadReplicationTargets();
+            loadActiveFaults();
+        }
+
+        function closeFaultInjection() {
+            document.getElementById('fault-modal').style.display = 'none';
+        }
+
+        function loadReplicationTargets() {
+            fetch('/replication-targets')
+                .then(res => res.json())
+                .then(data => {
+                    const select = document.getElementById('fault-target-system');
+                    // Clear existing options except the first one
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    // Add new options
+                    if (data.targets && data.targets.length > 0) {
+                        data.targets.forEach(target => {
+                            const option = document.createElement('option');
+                            option.value = target.id;
+                            option.textContent = `${target.name} (ID: ${target.id})`;
+                            select.appendChild(option);
+                        });
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = "";
+                        option.textContent = "No synchronous replication targets available";
+                        option.disabled = true;
+                        select.appendChild(option);
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to load replication targets:", err);
+                });
+        }
+
+        function loadActiveFaults() {
+            fetch('/replication-fault')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('active-faults-container');
+                    const table = document.getElementById('active-faults-table');
+                    
+                    // Clear existing rows
+                    table.innerHTML = '';
+                    
+                    if (data.faults && data.faults.length > 0) {
+                        container.style.display = 'block';
+                        
+                        data.faults.forEach(fault => {
+                            const row = document.createElement('tr');
+                            
+                            // Target system column
+                            const targetCell = document.createElement('td');
+                            targetCell.textContent = fault.target_system_name || fault.target_system_id;
+                            row.appendChild(targetCell);
+                            
+                            // Sleep time column
+                            const sleepCell = document.createElement('td');
+                            sleepCell.textContent = `${fault.sleep_time} ms`;
+                            row.appendChild(sleepCell);
+                            
+                            // Duration column
+                            const durationCell = document.createElement('td');
+                            if (fault.expires_at) {
+                                const now = new Date().getTime() / 1000;
+                                const remainingSeconds = Math.max(0, Math.floor(fault.expires_at - now));
+                                durationCell.textContent = `${remainingSeconds} seconds remaining`;
+                            } else {
+                                durationCell.textContent = 'Permanent';
+                            }
+                            row.appendChild(durationCell);
+                            
+                            // Actions column
+                            const actionsCell = document.createElement('td');
+                            const removeButton = document.createElement('button');
+                            removeButton.className = 'btn btn-sm btn-danger';
+                            removeButton.innerHTML = '<i class="fas fa-trash"></i> Remove';
+                            removeButton.onclick = () => removeFault(fault.target_system_id);
+                            actionsCell.appendChild(removeButton);
+                            row.appendChild(actionsCell);
+                            
+                            table.appendChild(row);
+                        });
+                    } else {
+                        container.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to load active faults:", err);
+                });
+        }
+
+        function injectFault() {
+            const targetSystemId = document.getElementById('fault-target-system').value;
+            const sleepTime = document.getElementById('fault-sleep-time').value;
+            const duration = document.getElementById('fault-duration').value;
+            
+            if (!targetSystemId) {
+                alert('Please select a target system');
+                return;
+            }
+            
+            if (!sleepTime || sleepTime <= 0) {
+                alert('Sleep time must be a positive number');
+                return;
+            }
+            
+            // Build request payload
+            const payload = {
+                target_system_id: targetSystemId,
+                sleep_time: parseInt(sleepTime)
+            };
+            
+            // Add duration if it's greater than 0
+            if (duration && parseInt(duration) > 0) {
+                payload.duration = parseInt(duration);
+            }
+            
+            // Send request to inject fault
+            fetch('/replication-fault', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Error: ${data.error}`);
+                } else {
+                    alert(`Success: ${data.message}`);
+                    loadActiveFaults();
+                }
+            })
+            .catch(err => {
+                console.error("Failed to inject fault:", err);
+                alert(`Error: ${err.message}`);
+            });
+        }
+
+        function removeFault(targetSystemId) {
+            if (!confirm('Are you sure you want to remove this fault?')) {
+                return;
+            }
+            
+            fetch(`/replication-fault/${targetSystemId}`, {
+                method: 'DELETE'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Error: ${data.error}`);
+                } else {
+                    alert(`Success: ${data.message}`);
+                    loadActiveFaults();
+                }
+            })
+            .catch(err => {
+                console.error("Failed to remove fault:", err);
+                alert(`Error: ${err.message}`);
+            });
+        }
+        
+        // Refresh active faults every 5 seconds when modal is open
+        setInterval(() => {
+            if (document.getElementById('fault-modal').style.display === 'block') {
+                loadActiveFaults();
+            }
+        }, 5000);
     </script>
 </body>
 </html>

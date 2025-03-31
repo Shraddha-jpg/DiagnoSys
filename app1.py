@@ -899,14 +899,13 @@ def replication_receive():
                     return jsonify({"error": f"Failed to update system metrics: {str(e)}"}), 500
 
     if should_log:
-        # Log receiver replication event in receiver's log format
+        # Log receiver replication event in receiver's log format - only show TimeTaken
         if replication_type == "synchronous":
             receiver_log = (f"Active synchronous replication received for volume {volume_id} "
-                        f"from {sender} - Throughput: {replication_throughput} MB/s, "
-                        f"Latency: {latency}ms")
+                        f"from {sender} (TimeTaken: {latency}ms)")
         else:
             receiver_log = (f"Received {replication_type} replication for volume {volume_id} "
-                        f"with throughput {replication_throughput} MB/s from sender {sender}")
+                        f"from sender {sender} (TimeTaken: {latency}ms)")
         logger.info(receiver_log, global_log=True)
 
     # Update target's replication metrics
@@ -934,6 +933,141 @@ def replication_stop():
     log_msg = f"Replication stopped for volume {volume_id} from {sender}: {reason}"
     logger.info(log_msg, global_log=True)
     return jsonify({"message": "Replication stop acknowledged"}), 200
+
+@app.route('/replication-fault', methods=['POST'])
+def inject_replication_fault():
+    """
+    Inject a fault into a replication link between systems
+    
+    Request JSON:
+        target_system_id: ID of the target system to inject fault for
+        sleep_time: Delay in milliseconds to add to replication operations
+        duration: Duration in seconds for the fault (optional, defaults to permanent)
+    """
+    data = request.get_json(silent=True) or {}
+    target_system_id = data.get("target_system_id")
+    sleep_time = data.get("sleep_time")
+    duration = data.get("duration")
+    
+    # Validate required parameters
+    if not target_system_id:
+        return jsonify({"error": "Target system ID is required"}), 400
+    
+    try:
+        sleep_time = int(sleep_time)
+        if sleep_time <= 0:
+            return jsonify({"error": "Sleep time must be a positive integer"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Sleep time must be a valid integer"}), 400
+    
+    # Convert duration to integer if provided
+    if duration:
+        try:
+            duration = int(duration)
+            if duration <= 0:
+                duration = None  # Permanent if 0 or negative
+        except (ValueError, TypeError):
+            duration = None  # Permanent if invalid
+    
+    # Get all systems to validate target system
+    systems = storage_mgr.get_all_systems()
+    target_system = next((s for s in systems if s["id"] == target_system_id), None)
+    
+    if not target_system:
+        return jsonify({"error": f"Target system with ID {target_system_id} not found"}), 404
+    
+    # Add the fault
+    fault = storage_mgr.add_replication_fault(target_system_id, sleep_time, duration)
+    
+    return jsonify({
+        "message": f"Fault injected into replication link to {target_system.get('name', 'Unknown')}",
+        "fault": fault
+    }), 200
+
+@app.route('/replication-fault/<target_system_id>', methods=['DELETE'])
+def remove_replication_fault(target_system_id):
+    """
+    Remove a fault from a replication link
+    
+    Path parameter:
+        target_system_id: ID of the target system to remove fault for
+    """
+    # Check if fault exists
+    fault = storage_mgr.get_replication_fault(target_system_id)
+    
+    if not fault:
+        return jsonify({"error": f"No fault exists for target system {target_system_id}"}), 404
+    
+    # Remove the fault
+    storage_mgr.remove_replication_fault(target_system_id)
+    
+    return jsonify({
+        "message": f"Fault removed from replication link to target system {target_system_id}"
+    }), 200
+
+@app.route('/replication-fault', methods=['GET'])
+def get_replication_faults():
+    """
+    Get all active replication faults
+    """
+    faults = storage_mgr.get_all_replication_faults()
+    
+    # Enhance the response with system names
+    systems = storage_mgr.get_all_systems()
+    system_map = {s["id"]: s["name"] for s in systems}
+    
+    result = []
+    for target_id, fault in faults.items():
+        fault_info = fault.copy()
+        fault_info["target_system_name"] = system_map.get(target_id, "Unknown")
+        result.append(fault_info)
+    
+    return jsonify({"faults": result}), 200
+
+@app.route('/replication-targets', methods=['GET'])
+def get_replication_targets():
+    """
+    Get all valid target systems for fault injection
+    (systems that have any volume with sync replication)
+    """
+    # Get current system ID
+    systems = storage_mgr.load_resource("system")
+    current_system_id = systems[0]["id"] if systems else None
+    
+    if not current_system_id:
+        return jsonify({"error": "No system found"}), 404
+    
+    # Get all volumes with replication settings
+    volumes = storage_mgr.load_resource("volume")
+    target_systems = set()
+    
+    for volume in volumes:
+        if volume.get("is_exported") and volume.get("replication_settings"):
+            for rep_setting in volume.get("replication_settings", []):
+                # Only consider synchronous replication
+                if rep_setting.get("replication_type") == "synchronous" and rep_setting.get("replication_target"):
+                    target_id = rep_setting.get("replication_target", {}).get("id")
+                    target_name = rep_setting.get("replication_target", {}).get("name")
+                    if target_id:
+                        target_systems.add((target_id, target_name))
+    
+    # Get all global systems to get their names
+    global_systems = storage_mgr.get_all_systems()
+    
+    # Get all active faults to filter out systems with faults
+    active_faults = storage_mgr.get_all_replication_faults()
+    
+    # Format response - filter out systems that already have active faults
+    targets = [
+        {
+            "id": target_id,
+            "name": target_name or next((s["name"] for s in global_systems if s["id"] == target_id), "Unknown")
+        }
+        for target_id, target_name in target_systems
+        if target_id not in active_faults  # Filter out systems with active faults
+    ]
+    
+    return jsonify({"targets": targets}), 200
 
 #LOG_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/logs_5000.txt")
 LOG_FILE = os.path.join(data_dir, "logs_5000.txt")

@@ -36,6 +36,9 @@ class StorageManager:
 
         # Dictionary to keep track of ongoing replication tasks (one per volume)
         self.replication_tasks = {}
+        
+        # Dictionary to keep track of replication faults (source-target system links)
+        self.replication_faults = {}
 
         # Add these class constants at the start of __init__
         self.IO_SIZE_KB = 8  # Default I/O size in KB
@@ -632,7 +635,8 @@ class StorageManager:
         target = rep_setting.get("replication_target", {})
         target_id = target.get("id")
         last_log_time = 0
-        SYNC_LOG_INTERVAL = 200  # Log every 200 seconds for sync replication
+        # Make sync replication logs more frequent
+        SYNC_LOG_INTERVAL = 30  # Log every 30 seconds for sync replication (reduced from 200)
 
         # Get source volume and system info
         volumes = self.load_resource("volume")
@@ -658,16 +662,33 @@ class StorageManager:
             
             delay_sec = rep_setting.get("delay_sec", 0)
 
-            # Simulate replication throughput calculation.
+            # Simulate base replication throughput 
             io_count = random.randint(50, 500)
-            latency = round(random.uniform(1.0, 5.0), 2)
-            replication_throughput = round(io_count / latency, 2)  # MB/s
+            replication_throughput = round(io_count / 2.0, 2)  # MB/s
+
+            # Get current timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            # Update replication metrics
+            # Base time for replication between 0.01-0.05ms
+            base_time_ms = round(random.uniform(0.01, 0.05), 3)
+            
+            # Check for replication fault and calculate total time
+            fault = self.get_replication_fault(target_id)
+            total_time_ms = base_time_ms
+            fault_sleep_ms = 0
+            
+            # Only apply fault to synchronous replication
+            if fault and replication_type == "synchronous":
+                fault_sleep_ms = fault.get("sleep_time", 0)
+                total_time_ms = base_time_ms + fault_sleep_ms
+                
+                # Removed direct latency update here - we'll rely on update_system_metrics 
+                # which is called in add_replication_fault and remove_replication_fault
+            
+            # Update replication metrics with the calculated time
             metrics = {
                 "throughput": replication_throughput,
-                "latency": latency,
+                "latency": total_time_ms,  # This is now our calculated time
                 "io_count": io_count,
                 "replication_type": replication_type,
                 "timestamp": timestamp
@@ -681,19 +702,6 @@ class StorageManager:
                 (current_time - last_log_time) >= SYNC_LOG_INTERVAL  # Periodic sync log
             )
 
-            if should_log:
-                # Log sender replication event
-                if replication_type == "synchronous":
-                    sender_log = (f"Active synchronous replication for volume {volume_id} "
-                                f"to target {target.get('name')} - "
-                                f"Throughput: {replication_throughput} MB/s, Latency: {latency}ms")
-                else:
-                    sender_log = (f"Replicating volume {volume_id} with throughput "
-                                f"{replication_throughput} MB/s to target {target.get('name')}")
-                if self.logger:
-                    self.logger.info(sender_log, global_log=True)
-                last_log_time = current_time
-
             # Determine target endpoint by looking up the target system in global systems.
             try:
                 global_systems = self.get_all_systems()
@@ -701,25 +709,48 @@ class StorageManager:
                 if target_sys:
                     target_port = target_sys["port"]
                     target_url = f"http://localhost:{target_port}/replication-receive"
+                    
+                    # Send the calculated total_time_ms to the target system
                     payload = {
                         "volume_id": volume_id,
                         "replication_throughput": replication_throughput,
                         "sender": self.data_dir,
                         "timestamp": timestamp,
                         "replication_type": replication_type,
-                        "should_log": should_log,  # Tell target whether to log
-                        "latency": latency,
+                        "should_log": should_log,
+                        "latency": total_time_ms,  # Send the calculated time to target
                         "source_volume": {
                              "id": volume["id"],
                              "name": volume["name"],
                              "size": volume["size"],
                              "system_name": system["name"]
                          }
-
                     }
+                    
+                    # Now actually apply the sleep time to simulate the delay
+                    # Base delay
+                    time.sleep(base_time_ms / 1000.0)
+                    
+                    # Fault sleep time (only for sync replication)
+                    if fault_sleep_ms > 0 and replication_type == "synchronous":
+                        time.sleep(fault_sleep_ms / 1000.0)
+                    
+                    # Send the request
                     response = requests.post(target_url, json=payload, timeout=5)
+                    
                     if response.status_code != 200:
                         self.logger.warn(f"Failed to deliver replication data to target {target.get('name')}: {response.text}", global_log=True)
+                    elif should_log:
+                        # Log sender replication event with time taken only
+                        if replication_type == "synchronous":
+                            sender_log = (f"Active synchronous replication for volume {volume_id} "
+                                        f"to target {target.get('name')} (TimeTaken: {total_time_ms}ms)")
+                        else:
+                            sender_log = (f"Replicating volume {volume_id} "
+                                        f"to target {target.get('name')} (TimeTaken: {total_time_ms}ms)")
+                        if self.logger:
+                            self.logger.info(sender_log, global_log=True)
+                        last_log_time = current_time
                 else:
                     self.logger.warn(f"Target system with id {target_id} not found", global_log=True)
             except Exception as ex:
@@ -789,36 +820,104 @@ class StorageManager:
             "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         self.save_replication_metrics(all_metrics)
-    '''
+
+    def force_system_metrics_update_for_fault(self, target_system_id, action="added", sleep_time=None):
+        """
+        Force an immediate update of system metrics after a fault is added or removed.
+        
+        Args:
+            target_system_id: ID of the target system 
+            action: 'added' or 'removed' to indicate what happened
+            sleep_time: The sleep time in ms that was added/removed (only needed for 'added')
+        """
+        # Immediately update system metrics to reflect the new fault state
+        self.update_system_metrics()
+
+    def add_replication_fault(self, target_system_id, sleep_time, duration=None):
+        """
+        Adds a fault to a replication link between this system and target system
+        
+        Args:
+            target_system_id: ID of the target system
+            sleep_time: Delay in milliseconds to add to replication operations
+            duration: Duration in seconds for the fault (None means permanent)
+        
+        Returns:
+            Dictionary with fault information
+        """
+        fault_id = str(uuid.uuid4())
+        fault_info = {
+            "id": fault_id,
+            "target_system_id": target_system_id,
+            "sleep_time": sleep_time,
+            "created_at": datetime.now().timestamp(),
+            "expires_at": datetime.now().timestamp() + duration if duration else None
+        }
+        
+        self.replication_faults[target_system_id] = fault_info
+        
+        # Immediately update system metrics to reflect new fault
+        self.force_system_metrics_update_for_fault(target_system_id, "added", sleep_time)
+        
+        return fault_info
     
-    MAX_SNAPSHOTS = 10  # Maximum number of snapshots per volume
-    IO_SIZE_KB = 8  # Assume each I/O operation is 8KB  '
-    '''
-
-    def start_cleanup_thread(self):
-        """Start the background cleanup thread."""
-        def cleanup_worker():
-            while not self.cleanup_stop:
-                try:
-                    self.cleanup()
-                except Exception as e:
-                    self.logger.error(f"Error in cleanup thread: {str(e)}", global_log=True)
-                time.sleep(30)  # Run cleanup every 30 seconds
-
-        self.cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
-        self.cleanup_thread.start()
-        self.logger.info("Started background cleanup thread", global_log=True)
-
-    def stop_cleanup_thread(self):
-        """Stop the background cleanup thread."""
-        self.cleanup_stop = True
-        if self.cleanup_thread:
-            self.cleanup_thread.join(timeout=1)
-            self.logger.info("Stopped background cleanup thread", global_log=True)
+    def remove_replication_fault(self, target_system_id):
+        """
+        Removes a fault from a replication link
+        
+        Args:
+            target_system_id: ID of the target system
+        
+        Returns:
+            True if fault was removed, False if no fault existed
+        """
+        if target_system_id in self.replication_faults:
+            fault = self.replication_faults.pop(target_system_id)
+            
+            # Immediately update system metrics to reflect removed fault
+            self.force_system_metrics_update_for_fault(target_system_id, "removed")
+            
+            return True
+        return False
+    
+    def get_replication_fault(self, target_system_id):
+        """
+        Gets information about a fault in a replication link
+        
+        Args:
+            target_system_id: ID of the target system
+        
+        Returns:
+            Dictionary with fault information or None if no fault exists
+        """
+        fault = self.replication_faults.get(target_system_id)
+        
+        # Check if fault has expired
+        if fault and fault.get("expires_at") and fault["expires_at"] < datetime.now().timestamp():
+            self.remove_replication_fault(target_system_id)
+            return None
+            
+        return fault
+    
+    def get_all_replication_faults(self):
+        """
+        Gets all active replication faults
+        
+        Returns:
+            Dictionary of target_system_id -> fault_info
+        """
+        # Remove expired faults
+        for target_id in list(self.replication_faults.keys()):
+            fault = self.replication_faults[target_id]
+            if fault.get("expires_at") and fault["expires_at"] < datetime.now().timestamp():
+                self.remove_replication_fault(target_id)
+                
+        return self.replication_faults
 
     def calculate_latency(self, system_metrics):
         """
         Calculate latency based on system saturation and capacity usage percentages.
+        Also adds any active replication fault sleep times to the latency.
         Returns latency in milliseconds.
         """
         # Get current saturation and capacity usage percentages
@@ -833,29 +932,32 @@ class StorageManager:
         # Use the higher of saturation or capacity percentage to determine latency
         highest_pct = max(saturation_pct, capacity_pct)
 
-        # Default latency is 1ms
+        # Calculate base latency (in milliseconds) based on thresholds
+        base_latency = 1.0  # default 1ms
         if highest_pct <= 70:
-            return 1.0
+            base_latency = 1.0
         elif 70 < highest_pct <= 80:
-            return 2.0
+            base_latency = 2.0
         elif 80 < highest_pct <= 90:
-            return 3.0
+            base_latency = 3.0
         elif 90 < highest_pct <= 100:
-            return 4.0
+            base_latency = 4.0
         else:
-            return 5.0
-
-    def calculate_volume_throughput(self, volume):
-        """
-        Calculate throughput for a volume based on IOPS and I/O size.
-        Returns throughput in MB/s.
-        """
-        FIXED_IOPS = 2000  # Fixed IOPS for all volumes
-        io_size_kb = volume.get("workload_size", 4)  # Default to 4KB if not specified
+            base_latency = 5.0
         
-        # Convert KB to MB and calculate throughput
-        throughput_mb = (FIXED_IOPS * io_size_kb) / 1024
-        return throughput_mb
+        # Get current active faults - force a refresh to ensure we have the latest
+        active_faults = self.get_all_replication_faults()
+        total_fault_ms = 0.0
+        
+        # Add all active fault sleep times (directly in ms)
+        for target_id, fault in active_faults.items():
+            fault_sleep_ms = fault.get("sleep_time", 0)
+            total_fault_ms += fault_sleep_ms
+        
+        # Calculate total latency by adding base latency (in ms) and fault times (in ms)
+        total_latency = base_latency + total_fault_ms
+        
+        return total_latency
 
     def update_system_metrics(self):
         """
@@ -899,10 +1001,11 @@ class StorageManager:
                 "capacity_percentage": capacity_pct
             }
             
-            # Calculate new latency based on updated metrics
+            # Calculate new latency based on updated metrics and active faults
             current_latency = self.calculate_latency(metrics)
             metrics["current_latency"] = current_latency
             
+            # Save the metrics
             self.save_metrics(metrics)
             
             # Log the metrics update with more detailed information
@@ -919,6 +1022,39 @@ class StorageManager:
 
         except Exception as e:
             self.logger.error(f"Failed to update system metrics: {str(e)}", global_log=True)
+
+    def calculate_volume_throughput(self, volume):
+        """
+        Calculate throughput for a volume based on IOPS and I/O size.
+        Returns throughput in MB/s.
+        """
+        FIXED_IOPS = 2000  # Fixed IOPS for all volumes
+        io_size_kb = volume.get("workload_size", 4)  # Default to 4KB if not specified
+        
+        # Convert KB to MB and calculate throughput
+        throughput_mb = (FIXED_IOPS * io_size_kb) / 1024
+        return throughput_mb
+
+    def start_cleanup_thread(self):
+        """Start the background cleanup thread."""
+        def cleanup_worker():
+            while not self.cleanup_stop:
+                try:
+                    self.cleanup()
+                except Exception as e:
+                    self.logger.error(f"Error in cleanup thread: {str(e)}", global_log=True)
+                time.sleep(30)  # Run cleanup every 30 seconds
+
+        self.cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
+        self.cleanup_thread.start()
+        self.logger.info("Started background cleanup thread", global_log=True)
+
+    def stop_cleanup_thread(self):
+        """Stop the background cleanup thread."""
+        self.cleanup_stop = True
+        if self.cleanup_thread:
+            self.cleanup_thread.join(timeout=1)
+            self.logger.info("Stopped background cleanup thread", global_log=True)
 
     def cleanup(self):
         """
@@ -1040,6 +1176,10 @@ class StorageManager:
                     self.logger.cleanup_log(summary_msg)
 
             # Update system metrics after cleanup
+            current_metrics = self.load_metrics()
+            current_latency = current_metrics.get("current_latency") 
+            
+            # Only update metrics but preserve any existing fault-related latency
             self.update_system_metrics()
 
             # Log final capacity changes
@@ -1051,6 +1191,9 @@ class StorageManager:
                 f"- Final: {final_capacity:.2f} GB"
             )
 
+            # Get the current metrics after update
+            updated_metrics = self.load_metrics()
+            
             # Log cleanup results with detailed summary
             cleanup_result_msg = (
                 f"Housekeeping completed:\n"
@@ -1058,8 +1201,8 @@ class StorageManager:
                 f"- Capacity freed: {capacity_freed:.2f} GB\n"
                 f"- Current system metrics:\n"
                 f"  - Capacity: {final_capacity:.2f} GB\n"
-                f"  - Saturation: {self.load_metrics().get('saturation', 0):.2f}%\n"
-                f"  - Latency: {self.load_metrics().get('current_latency', 1.0):.2f}ms"
+                f"  - Saturation: {updated_metrics.get('saturation', 0):.2f}%\n"
+                f"  - Latency: {updated_metrics.get('current_latency', 1.0):.2f}ms"
             )
             self.logger.cleanup_log(cleanup_result_msg)
 
