@@ -1122,10 +1122,63 @@ def get_top_latency():
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({"error": "Log file not found"}), 404
-        
+
         now = datetime.datetime.utcnow()
         fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
         volume_latency = {}
+
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()
+
+        # Match timestamp, volume ID, and latency from log lines
+        log_pattern = re.compile(r'\[(.*?)\]\[INFO\] Volume: (.*?), .*? Latency: ([\d\.]+)ms')
+
+        for line in lines:
+            match = log_pattern.search(line)
+            if match:
+                timestamp_str, volume_id, latency = match.groups()
+                timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                if timestamp >= fifteen_minutes_ago:
+                    normalized_vol_id = volume_id.strip().lower()
+                    volume_latency.setdefault(normalized_vol_id, []).append(float(latency))
+
+        # Compute average latency per volume
+        avg_latency = {
+            vol: sum(lats) / len(lats) for vol, lats in volume_latency.items() if lats
+        }
+
+        # Get top 5 volumes by average latency
+        top_volumes = sorted(avg_latency.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        # Load volume data to map volume_id -> host_id
+        volume_data = storage_mgr.load_resource("volume")
+        volume_host_map = {
+            v["id"].strip().lower(): v.get("exported_host_id", "N/A") for v in volume_data
+        }
+
+        result = []
+        for vol_id, latency in top_volumes:
+            host_id = volume_host_map.get(vol_id, "Unknown")
+            result.append({
+                "volume_id": vol_id,
+                "avg_latency": round(latency, 2),
+                "host_id": host_id
+            })
+
+        return jsonify({"top_volumes": result})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/latency-history/<volume_id>', methods=['GET'])
+def get_latency_history(volume_id):
+    try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({"error": "Log file not found"}), 404
+
+        now = datetime.datetime.utcnow()
+        one_hour_ago = now - datetime.timedelta(hours=1)
+        latency_data = []
 
         with open(LOG_FILE, "r") as f:
             lines = f.readlines()
@@ -1135,20 +1188,12 @@ def get_top_latency():
         for line in lines:
             match = log_pattern.search(line)
             if match:
-                timestamp_str, volume_id, latency = match.groups()
+                timestamp_str, vol_id, latency = match.groups()
                 timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-                if timestamp >= fifteen_minutes_ago:
-                    if volume_id not in volume_latency:
-                        volume_latency[volume_id] = []
-                    volume_latency[volume_id].append(float(latency))
+                if vol_id == volume_id and timestamp >= one_hour_ago:
+                    latency_data.append({"timestamp": timestamp_str, "latency": float(latency)})
 
-        # Compute average latency per volume
-        avg_latency = {vol: sum(lats) / len(lats) for vol, lats in volume_latency.items() if lats}
-
-        # Get top 3 volumes by highest average latency
-        top_volumes = sorted(avg_latency.items(), key=lambda x: x[1], reverse=True)[:3]
-
-        return jsonify({"top_volumes": [{"volume_id": v, "avg_latency": round(l, 2)} for v, l in top_volumes]})
+        return jsonify({"volume_id": volume_id, "latency_data": latency_data})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

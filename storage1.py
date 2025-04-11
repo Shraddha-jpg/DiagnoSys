@@ -334,9 +334,9 @@ class StorageManager:
 
                 if volume and volume.get("is_exported", False):
                     host_id = volume.get("exported_host_id", "Unknown")
-                    io_count = random.randint(800, 1200)
-                    latency = round(random.uniform(1.5, 8.0), 2)
-                    throughput = round(io_count * self.IO_SIZE_KB / 1024, 2)
+                    io_count = 2000
+                    throughput = self.calculate_volume_throughput(volume)  # Fixed: Use self.
+                    latency = self.calculate_latency(self.load_metrics())  # Fixed: Use self. and load metrics
 
                     # ✅ Ensure io_metrics is only inside data_instance_5001
                     metrics = self.load_resource("io_metrics")
@@ -368,14 +368,14 @@ class StorageManager:
                         break
 
                     host_id = volume.get("exported_host_id", "Unknown")
-                    io_count = random.randint(100, 1000)
-                    latency = round(random.uniform(1.0, 10.0), 2)
-                    throughput = round(io_count * self.IO_SIZE_KB / 1024, 2)
+                    io_count = 2000
+                    latency = self.calculate_latency(self.load_metrics())  # Fixed: Use self. and load metrics
+                    throughput = self.calculate_volume_throughput(volume)  # Fixed: Use self.
 
                     metrics = self.load_resource("io_metrics")
                     if not isinstance(metrics, list):
                         metrics = []
-                    else :
+                    else:
                         metrics = [m for sublist in metrics for m in (sublist if isinstance(sublist, list) else [sublist])]
                         metrics = [m for m in metrics if isinstance(m, dict)]  # Ensure elements are dicts
 
@@ -401,7 +401,6 @@ class StorageManager:
                 if self.logger:
                     self.logger.error(f"Host I/O error: {str(e)}", global_log=True)
 
-    
         worker_thread = threading.Thread(target=io_worker, daemon=True)
         worker_thread.start()
         print(f"Background thread started for volume {volume_id}")  # Debug log

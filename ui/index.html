@@ -89,6 +89,11 @@
             color: var(--text-light);
         }
         
+        /* Add spacing to prevent sidebar heading from overlapping with toggle button */
+        .sidebar h2:first-child {
+            margin-top: 60px;
+        }
+        
         .main {
             flex-grow: 1;
             padding: 20px;
@@ -106,6 +111,9 @@
             box-shadow: var(--shadow);
             transform: translateY(0);
             transition: var(--transition);
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
         
         .card:hover {
@@ -416,21 +424,6 @@
         }
 
                /* Add these styles within the existing <style> tag */
-        .latency-card {
-            background: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: var(--shadow);
-            transform: translateY(0);
-            transition: var(--transition);
-        }
-
-        .latency-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-
         .latency-container {
             display: flex;
             flex-wrap: wrap;
@@ -521,6 +514,40 @@
             padding: 10px;
             border-radius: var(--border-radius);
             text-align: center;
+        }
+
+        /* Add modal backdrop for latency history */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1500;
+            display: none;
+        }
+        
+        /* Style for the close button in the corner */
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .modal-close:hover {
+            background: #e95757;
+            transform: scale(1.1);
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -838,6 +865,39 @@
                 <h2><i class="fas fa-reply section-icon"></i> Response</h2>
                 <pre id="response"></pre>
             </div>
+
+            <!-- Top Latency Card -->
+            <div class="card" id="top-latency-card">
+                <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 5 Volumes by Latency (Last 15 Min)</h2>
+                <div id="topLatencyTableContainer">
+                    <table class="latency-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Volume ID</th>
+                                <th>Host ID</th>
+                                <th>Avg Latency (ms)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topLatencyTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Latency Card -->
+            <div class="card" id="latency-card">
+                <h2><i class="fas fa-chart-line section-icon"></i> Exported Volumes - Latency Over Last 15 Minutes</h2>
+                <div id="exportedVolumesCharts"></div>
+            </div>
+            
+            <!-- Latency History Card -->
+            <div class="card initially-hidden" id="latencyGraphCard">
+                <h2><i class="fas fa-chart-line section-icon"></i> Volume Latency History</h2>
+                <h3 id="graphTitle"></h3>
+                <canvas id="latencyChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Note: Latency History Card has been replaced by a modal popup -->
         </div>
     </div>
 
@@ -908,127 +968,19 @@
             <i class="fas fa-times"></i> Close
         </button>
     </div>
-
-    <div class="card" id="latency-card">
-        <h2><i class="fas fa-chart-line section-icon"></i> Exported Volumes - Latency Over Last 15 Minutes</h2>
-        <div id="exportedVolumesCharts"></div>
-    </div>
-
     
-    <!-- <div class="card" id="top-latency-card">
-             <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 3 Volumes by Latency (Last 15 Min)</h2>
-             <ul id="topLatencyList"></ul>
-         </div>-->
-    
-
-    <div class="card" id="top-latency-card">
-        <h2><i class="fas fa-tachometer-alt section-icon"></i> Top 3 Volumes by Latency (Last 15 Min)</h2>
-        <div id="topLatencyTableContainer">
-            <table class="latency-table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Volume ID</th>
-                        <th>Avg Latency (ms)</th>
-                    </tr>
-                </thead>
-                <tbody id="topLatencyTable"></tbody>
-            </table>
+    <!-- Volume Latency History Modal -->
+    <div id="latency-history-backdrop" class="modal-backdrop"></div>
+    <div id="latency-history-modal" class="logs-modal" style="max-width: 850px; width: 90%; z-index: 1501;">
+        <div class="modal-close" onclick="closeLatencyHistory()">
+            <i class="fas fa-times"></i>
+        </div>
+        <h2><i class="fas fa-chart-line section-icon"></i> Volume Latency History</h2>
+        <h3 id="modal-graph-title" style="text-align: center; color: var(--primary);"></h3>
+        <div style="height: 400px; margin: 20px 0; padding: 10px; background: #f8f8f8; border-radius: var(--border-radius);">
+            <canvas id="modal-latency-chart"></canvas>
         </div>
     </div>
-    
-    <!-- <script>
-             async function fetchLatencyData() {
-                 const response = await fetch('/api/latency'); // API endpoint for latency data
-                 const data = await response.json();
-                 console.log("Latency Data:", data);
-                 return data;
-             }
-         
-             // async function updateCharts() {
-             //     const latencyData = await fetchLatencyData();
-             //     const exportedVolumesDiv = document.getElementById('exportedVolumesCharts');
-             //     exportedVolumesDiv.innerHTML = ""; // Clear existing charts
-                 
-             //     Object.keys(latencyData).forEach(volumeId => {
-             //         const chartContainer = document.createElement('div');
-             //         chartContainer.className = 'chart-container';
-             //         chartContainer.innerHTML = `<h3>Volume ID: ${volumeId}</h3><canvas id="chart-${volumeId}"></canvas>`;
-             //         exportedVolumesDiv.appendChild(chartContainer);
-                     
-             //         const volumeCtx = document.getElementById(`chart-${volumeId}`).getContext('2d');
-             //         new Chart(volumeCtx, {
-             //             type: 'line',
-             //             data: {
-             //                 labels: latencyData[volumeId].timestamps,
-             //                 datasets: [{
-             //                     label: 'Latency (ms)',
-             //                     data: latencyData[volumeId].values,
-             //                     borderColor: 'red',
-             //                     fill: false
-             //                 }]
-             //             },
-             //             options: {
-             //                 responsive: true,
-             //                 scales: {
-             //                     x: { title: { display: true, text: 'Time' } },
-             //                     y: { title: { display: true, text: 'Latency (ms)' } }
-             //                 }
-             //             }
-             //         });
-             //     });
-             // }
-             async function updateCharts() {
-             const latencyData = await fetchLatencyData();
-             console.log("Latency Data:", latencyData);  // Debugging: Check structure
-         
-             const exportedVolumesDiv = document.getElementById('exportedVolumesCharts');
-             exportedVolumesDiv.innerHTML = ""; // Clear previous graphs
-         
-         // Check if latencyData is empty
-             if (Object.keys(latencyData).length === 0) {
-                 exportedVolumesDiv.innerHTML = "<p>No latency data available for exported volumes.</p>";
-                 return;
-             }
-     
-             Object.keys(latencyData).forEach(volumeId => {
-                 const volumeData = latencyData[volumeId];  // Extract data for the volume
-                 if (!volumeData.timestamps || !volumeData.values) return; // Skip if missing data
-     
-                 const chartContainer = document.createElement('div');
-                 chartContainer.className = 'chart-container';
-                 chartContainer.innerHTML = `
-                         <h3>Volume ID: ${volumeId}</h3>
-                         <canvas id="chart-${volumeId}"></canvas>
-                     `;
-                 exportedVolumesDiv.appendChild(chartContainer);
-                 
-                 const ctx = document.getElementById(`chart-${volumeId}`).getContext('2d');
-                 new Chart(ctx, {
-                     type: 'line',
-                     data: {
-                         labels: volumeData.timestamps,
-                         datasets: [{
-                             label: 'Latency (ms)',
-                             data: volumeData.values,
-                             borderColor: 'red',
-                             fill: false
-                         }]
-                     },
-                     options: {
-                         responsive: true,
-                         scales: {
-                             x: { title: { display: true, text: 'Time' } },
-                             y: { title: { display: true, text: 'Latency (ms)' } }
-                         }
-                     }
-                 });
-             });
-             }
-     
-             updateCharts();
-             setInterval(updateCharts, 60000); // Update every minute
-         </script> -->
 
     <script>
         async function fetchLatencyData() {
@@ -1137,13 +1089,14 @@
                     return;
                 }
 
-                data.top_volumes.slice(0, 3).forEach((volume, index) => { // Limit to top 3
+                data.top_volumes.slice(0, 5).forEach((volume, index) => { // Limit to top 3
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                     <td>${index + 1}</td>
-                     <td>${volume.volume_id}</td>
-                     <td class="latency-value">${parseFloat(volume.avg_latency).toFixed(2)}</td>
-                 `;
+                        <td>${index + 1}</td>
+                        <td><a href="#" onclick="fetchLatencyHistory('${volume.volume_id}')">${volume.volume_id}</a></td>
+                        <td>${volume.host_id || 'N/A'}</td>
+                        <td class="latency-value">${parseFloat(volume.avg_latency).toFixed(2)}</td>
+                    `;
                     topLatencyTable.appendChild(row);
                 });
 
@@ -1160,6 +1113,96 @@
         fetchTopLatency();
         setInterval(fetchTopLatency, 10000); // Update every 10 seconds
     </script>
+
+    <!-- Load Chart.js first -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let latencyChart = null; // Store the Chart.js instance
+
+async function fetchLatencyHistory(volumeId) {
+    try {
+        const response = await fetch(`/api/latency-history/${volumeId}`);
+        const data = await response.json();
+        console.log("Latency History Data:", data);
+
+        if (!data.latency_data || data.latency_data.length === 0) {
+            alert("No latency data available for the past hour.");
+            return;
+        }
+
+        // Extract timestamps and latency values
+        const timestamps = data.latency_data.map(entry => entry.timestamp);
+        const latencies = data.latency_data.map(entry => entry.latency);
+
+        // Render the graph in the modal
+        renderLatencyGraph(volumeId, timestamps, latencies);
+
+        // Show the modal and backdrop
+        document.getElementById('latency-history-backdrop').style.display = 'block';
+        document.getElementById('latency-history-modal').style.display = 'block';
+        
+        // Add click handler to backdrop
+        document.getElementById('latency-history-backdrop').onclick = closeLatencyHistory;
+
+    } catch (error) {
+        console.error("Error fetching latency history:", error);
+        alert("Failed to load latency history.");
+    }
+}
+
+function renderLatencyGraph(volumeId, timestamps, latencies) {
+    const ctx = document.getElementById('modal-latency-chart').getContext('2d');
+
+    // Destroy the previous chart instance before creating a new one
+    if (latencyChart) {
+        latencyChart.destroy();
+    }
+
+    // Update graph title
+    document.getElementById('modal-graph-title').innerText = `Latency for ${volumeId} (Last Hour)`;
+
+    // Create a new line chart
+    latencyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timestamps,
+            datasets: [{
+                label: `Latency for ${volumeId}`,
+                data: latencies,
+                borderColor: 'blue',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: { display: true, text: 'Time' },
+                    ticks: { maxTicksLimit: 10 }
+                },
+                y: {
+                    title: { display: true, text: 'Latency (ms)' },
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: { position: 'top' }
+            }
+        }
+    });
+}
+
+function closeLatencyHistory() {
+    document.getElementById('latency-history-backdrop').style.display = 'none';
+    document.getElementById('latency-history-modal').style.display = 'none';
+}
+
+</script>
+
 
     <script>
         document.getElementById('sidebar-toggle').addEventListener('click', function() {
