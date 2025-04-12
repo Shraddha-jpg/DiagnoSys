@@ -53,6 +53,21 @@ class Logger:
             global_entry = f"[PORT {self.port}][{timestamp}][ERROR] {message}"
             self._write_log(self.global_log_file, global_entry)
 
+    def snapshot_event_log(self, message):
+        """
+        Log snapshot creation events to both local instance log and snapshot_log.txt
+        Specifically for logs with the format: "📸 Snapshot xyz taken for volume abc..."
+        """
+        timestamp = self._get_timestamp()
+        entry = f"[{timestamp}] {message}"
+        
+        # Write to local instance log
+        self._write_log(self.local_log_file, entry)
+        
+        # Write to snapshot log
+        snapshot_log_file = os.path.join(os.path.dirname(self.local_log_file), "snapshot_log.txt")
+        self._write_log(snapshot_log_file, entry)
+
     def cleanup_log(self, message):
         """
         Special logging for cleanup events.

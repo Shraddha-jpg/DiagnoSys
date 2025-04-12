@@ -817,11 +817,24 @@
                             <option value="replication">Replication</option>
                         </select>
                     </div>
-                    <div class="form-control" id="value-container">
+                    <div class="form-control" id="value-container" style="display: none;"> <!-- Hide this old container -->
                         <label for="setting_value">Setting Value</label>
                         <input id="setting_value" placeholder="Enter value">
                     </div>
-                    <div class="form-control" id="max-snapshots-container">
+                    <!-- New Snapshot Frequency Container -->
+                    <div class="form-control" id="snapshot-frequency-row" style="display: none;">
+                        <label for="snapshot_value">Snapshot Frequency</label> 
+                        <div style="display: flex; gap: 10px; align-items: center;"> 
+                            <input type="number" id="snapshot_value" placeholder="Value" min="1" style="flex-grow: 1;">
+                            <select id="snapshot_unit" style="flex-basis: 120px;"> 
+                                <option value="seconds">Seconds</option>
+                                <option value="minutes" selected>Minutes</option> 
+                                <option value="hours">Hours</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Removed old separate value/unit containers -->
+                    <div class="form-control" id="max-snapshots-container" style="display: none;"> 
                         <label for="max_snapshots">Max Snapshots</label>
                         <input type="number" id="max_snapshots" min="1" placeholder="Enter max snapshots">
                     </div>
@@ -1591,7 +1604,39 @@ function closeLatencyHistory() {
                 system_id: systemId
             };
 
-            if (type === 'replication') {
+            if (type === 'snapshot') {
+                const snapshotValue = document.getElementById('snapshot_value').value;
+                const snapshotUnit = document.getElementById('snapshot_unit').value;
+                const maxSnapshots = document.getElementById('max_snapshots').value;
+
+                // Validation for snapshot value
+                if (!snapshotValue || parseInt(snapshotValue) <= 0) {
+                    return alert("Snapshot interval value must be a positive number");
+                }
+                if (!snapshotUnit) {
+                    return alert("Snapshot interval unit is required"); // Should not happen with dropdown
+                }
+
+                // Combine value and unit for the backend
+                const setting_value = `${snapshotValue} ${snapshotUnit}`;
+                data.value = setting_value; // Assign combined value
+
+                // Ensure max_snapshots is stored as an integer
+                if (maxSnapshots !== null && maxSnapshots !== '') { // Check if it has a value
+                    try {
+                        const parsedMax = parseInt(maxSnapshots);
+                        if (parsedMax <= 0) {
+                            throw new Error("Max snapshots must be positive.");
+                        }
+                        data.max_snapshots = parsedMax;
+                    } catch (e) {
+                        return alert("Max snapshots must be a positive integer");
+                    }
+                } else {
+                    return alert("Max snapshots value is required"); // Make max snapshots mandatory
+                }
+                
+            } else if (type === 'replication') {
                 const replicationType = document.getElementById('replication_type').value;
                 const delaySec = parseInt(document.getElementById('delay_sec').value);
                 const targetId = document.getElementById('replication_target').value;
@@ -1637,6 +1682,7 @@ function closeLatencyHistory() {
                     document.getElementById('setting_name').value = '';
                     document.getElementById('setting_value').value = '';
                     if (type === 'snapshot') {
+                        document.getElementById('snapshot_value').value = '';
                         document.getElementById('max_snapshots').value = '';
                     }
                 }
@@ -1759,26 +1805,30 @@ function closeLatencyHistory() {
 
         function handleSettingTypeChange() {
             const type = document.getElementById('setting_type').value;
-            const valueContainer = document.getElementById('value-container');
+            const valueContainer = document.getElementById('value-container'); // Keep reference to old one
+            const snapshotFrequencyRow = document.getElementById('snapshot-frequency-row'); // New combined row
             const replicationControls = document.getElementById('replication-controls');
             const maxSnapshotsContainer = document.getElementById('max-snapshots-container'); // Get the container
             
+            // Hide all specific containers first
+            valueContainer.style.display = 'none';
+            snapshotFrequencyRow.style.display = 'none'; // Hide combined row
+            replicationControls.style.display = 'none';
+            maxSnapshotsContainer.style.display = 'none';
+            
             if (type === 'replication') {
-                valueContainer.style.display = 'none';
                 replicationControls.style.display = 'block';
-                maxSnapshotsContainer.style.display = 'none'; // Hide for replication
                 loadAvailableTargets();
                 handleReplicationType();
             } else if (type === 'snapshot') {
-                valueContainer.style.display = 'block';
-                replicationControls.style.display = 'none';
-                maxSnapshotsContainer.style.display = 'block'; // Show for snapshot
-            } else {
-                valueContainer.style.display = 'block';
-                replicationControls.style.display = 'none';
-                maxSnapshotsContainer.style.display = 'none'; // Hide for other types if any
-            }
+                snapshotFrequencyRow.style.display = 'block'; // Show combined row
+                maxSnapshotsContainer.style.display = 'block'; // Show max snapshots
+            } 
+            // Add else block if other setting types are introduced later
         }
+
+        // Call this initially to set the correct visibility based on default selection
+        handleSettingTypeChange(); 
 
         let currentVolumeSettings = new Set();
 

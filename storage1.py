@@ -406,10 +406,6 @@ class StorageManager:
         print(f"Background thread started for volume {volume_id}")  # Debug log
 
 
-
-
-
-
     def unexport_volume(self, volume_id, reason="Manual unexport"):
         """
         Unexport a volume and cleanup all associated processes
@@ -493,16 +489,15 @@ class StorageManager:
                     # Update system metrics to reflect new capacity
                     self.update_system_metrics()
                     
-                    log_entry = f"[{timestamp}] 📸 Snapshot {snapshot_id} taken for volume {volume_id}, frequency {frequency} sec, size {snapshot['size']} GB, total snapshots: {volume['snapshot_count']}\n"
+                    # Use logger.snapshot_event_log instead of manual logging
+                    log_message = f"Snapshot {snapshot_id} taken for volume {volume_id}, frequency {frequency} sec, size {snapshot['size']} GB, total snapshots: {volume['snapshot_count']}"
+                    self.logger.snapshot_event_log(log_message)
+                    print(f"✅ Snapshot log updated: {log_message}")
                 else:
-                    log_entry = f"[{timestamp}] ⚠️ No matching snapshot setting found for frequency {frequency} sec\n"
-
-                try:
-                    with open(log_file_path, 'a', encoding='utf-8') as log_file:
-                        log_file.write(log_entry)
-                    print(f"✅ Snapshot log updated: {log_entry.strip()}")
-                except Exception as e:
-                    print(f"❌ ERROR: Could not write to snapshot_log.txt: {e}")
+                    # Use logger.snapshot_event_log for warning messages too
+                    log_message = f"⚠️ No matching snapshot setting found for frequency {frequency} sec"
+                    self.logger.snapshot_event_log(log_message)
+                    print(f"⚠️ {log_message}")
 
                 time.sleep(frequency)
 
