@@ -1010,8 +1010,8 @@
             exportedVolumesDiv.className = 'latency-container';
 
             // Check if latencyData is empty
-            if (Object.keys(latencyData).length === 0) {
-                exportedVolumesDiv.innerHTML = "<p>No latency data available for exported volumes.</p>";
+            if (!latencyData || Object.keys(latencyData).length === 0) {
+                exportedVolumesDiv.innerHTML = "<p>No latency data available for exported volumes in this system instance.</p>";
                 return;
             }
 
@@ -1096,13 +1096,13 @@
                 if (!data.top_volumes || data.top_volumes.length === 0) {
                     topLatencyTable.innerHTML = `
                      <tr>
-                         <td colspan="3">No data available</td>
+                         <td colspan="4">No latency data available for volumes in this system instance</td>
                      </tr>
                  `;
                     return;
                 }
 
-                data.top_volumes.slice(0, 5).forEach((volume, index) => { // Limit to top 3
+                data.top_volumes.slice(0, 5).forEach((volume, index) => { // Limit to top 5
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${index + 1}</td>
@@ -1118,7 +1118,7 @@
                 const topLatencyTable = document.getElementById('topLatencyTable');
                 topLatencyTable.innerHTML = `
                  <tr>
-                     <td colspan="3">Error loading data</td>
+                     <td colspan="4">Error loading data</td>
                  </tr>
              `;
             }

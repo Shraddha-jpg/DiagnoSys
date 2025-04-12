@@ -715,7 +715,7 @@ def export_volume():
         print(f"❌ ERROR: {traceback.format_exc()}")  # Print full error traceback
         return jsonify({"error": str(e)}), 500
 
-data_dir = "data_instance_5000"
+data_dir = f"data_instance_{PORT}"
 volume_file = os.path.join(DATA_DIR, "volume.json")
 
 # Ensure data directory exists
@@ -1070,7 +1070,7 @@ def get_replication_targets():
     return jsonify({"targets": targets}), 200
 
 #LOG_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/logs_5000.txt")
-LOG_FILE = os.path.join(data_dir, "logs_5000.txt")
+LOG_FILE = os.path.join(data_dir, f"logs_{PORT}.txt")
 VOLUME_FILE= os.path.join(data_dir, "volume.json")
 #VOLUME_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/volume.json")
 
@@ -1084,10 +1084,29 @@ def get_latency():
         if not os.path.exists(LOG_FILE) or not os.path.exists(VOLUME_FILE):
             return jsonify({"error": "Log file or volume file not found"}), 404
             
-        # Load exported volumes
-        with open(VOLUME_FILE, "r") as f:
-            volumes = json.load(f)
-        exported_volumes = {v["id"] for v in volumes if v.get("is_exported", False)}
+        # First, check if we have a system
+        exists, _, _ = ensure_system_exists()
+        if not exists:
+            return jsonify({}), 200  # Return empty data if no system exists
+            
+        # Get current system ID
+        systems = storage_mgr.load_resource("system")
+        current_system_id = systems[0]["id"] if systems else None
+        
+        if not current_system_id:
+            return jsonify({}), 200  # Return empty data if no system ID found
+            
+        # Load volumes from this instance
+        volumes = storage_mgr.load_resource("volume")
+        
+        # Filter to only include volumes from the current system
+        current_system_volumes = [v for v in volumes if v.get("system_id") == current_system_id]
+        
+        # Create a set of exported volume IDs from the current system
+        exported_volumes = {v["id"] for v in current_system_volumes if v.get("is_exported", False)}
+        
+        if not exported_volumes:
+            return jsonify({}), 200  # Return empty if no exported volumes in this system
         
         now = datetime.datetime.utcnow()
         fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
@@ -1115,13 +1134,37 @@ def get_latency():
         return jsonify({"error": str(e)}), 500
     
 
-LOG_FILE = os.path.join(data_dir, "logs_5000.txt")
+LOG_FILE = os.path.join(data_dir, f"logs_{PORT}.txt")
 
 @app.route('/api/top-latency', methods=['GET'])
 def get_top_latency():
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({"error": "Log file not found"}), 404
+        
+        # First, check if we have a system
+        exists, _, _ = ensure_system_exists()
+        if not exists:
+            return jsonify({"top_volumes": []}), 200  # Return empty list if no system
+            
+        # Get current system ID
+        systems = storage_mgr.load_resource("system")
+        current_system_id = systems[0]["id"] if systems else None
+        
+        if not current_system_id:
+            return jsonify({"top_volumes": []}), 200  # Return empty list if no system ID
+        
+        # Load volume data to get system-specific volumes
+        volume_data = storage_mgr.load_resource("volume")
+        
+        # Filter to only volumes from this system
+        current_system_volumes = {
+            v["id"].strip().lower(): v for v in volume_data 
+            if v.get("system_id") == current_system_id
+        }
+        
+        if not current_system_volumes:
+            return jsonify({"top_volumes": []}), 200  # No volumes in this system
 
         now = datetime.datetime.utcnow()
         fifteen_minutes_ago = now - datetime.timedelta(minutes=15)
@@ -1138,8 +1181,10 @@ def get_top_latency():
             if match:
                 timestamp_str, volume_id, latency = match.groups()
                 timestamp = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-                if timestamp >= fifteen_minutes_ago:
-                    normalized_vol_id = volume_id.strip().lower()
+                normalized_vol_id = volume_id.strip().lower()
+                
+                # Only include if volume belongs to current system
+                if timestamp >= fifteen_minutes_ago and normalized_vol_id in current_system_volumes:
                     volume_latency.setdefault(normalized_vol_id, []).append(float(latency))
 
         # Compute average latency per volume
@@ -1150,15 +1195,12 @@ def get_top_latency():
         # Get top 5 volumes by average latency
         top_volumes = sorted(avg_latency.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        # Load volume data to map volume_id -> host_id
-        volume_data = storage_mgr.load_resource("volume")
-        volume_host_map = {
-            v["id"].strip().lower(): v.get("exported_host_id", "N/A") for v in volume_data
-        }
-
         result = []
         for vol_id, latency in top_volumes:
-            host_id = volume_host_map.get(vol_id, "Unknown")
+            # We already filtered by system ID, so we can safely access the volume
+            vol_info = current_system_volumes.get(vol_id, {})
+            host_id = vol_info.get("exported_host_id", "N/A")
+            
             result.append({
                 "volume_id": vol_id,
                 "avg_latency": round(latency, 2),
@@ -1175,6 +1217,25 @@ def get_latency_history(volume_id):
     try:
         if not os.path.exists(LOG_FILE):
             return jsonify({"error": "Log file not found"}), 404
+
+        # First, check if we have a system
+        exists, _, _ = ensure_system_exists()
+        if not exists:
+            return jsonify({"error": "No system exists"}), 404
+            
+        # Get current system ID
+        systems = storage_mgr.load_resource("system")
+        current_system_id = systems[0]["id"] if systems else None
+        
+        if not current_system_id:
+            return jsonify({"error": "No system ID found"}), 404
+            
+        # Check if the volume belongs to this system
+        volumes = storage_mgr.load_resource("volume")
+        volume = next((v for v in volumes if v["id"] == volume_id and v.get("system_id") == current_system_id), None)
+        
+        if not volume:
+            return jsonify({"error": "Volume not found in this system"}), 404
 
         now = datetime.datetime.utcnow()
         one_hour_ago = now - datetime.timedelta(hours=1)
