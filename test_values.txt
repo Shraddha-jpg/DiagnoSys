@@ -69,17 +69,12 @@ System 5000:
     (With Snapshot settings with max_snapshot = 3,frequency=45secs)
     (With Replication settings with Synchronous,Target system 5001)
 
-    Volume2=75 GB 
-    (With Snapshot settings with max_snapshot = 5,,frequency=45secs)
-    (With Replication settings with Asynchronous,Target system 5001)
-
     Hosts:
     Host1 
-    Host2 
 
     Export Volumes:
         Volume1,Host1, workload_size(8KB)
-        Volume2,Host2, workload_size(4KB)
+
 
 System 5001:
     Max Throughput=250MB/s
