@@ -34,8 +34,8 @@ System 5000:
     Volumes:
 
     Volume1=125 GB
-    Volume2=65 GB (With Snapshot settings with max_snapshot = 5)
-    Volume3=25 GB (With Snapshot settings with max_snapshot = 5)
+    Volume2=65 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
+    Volume3=25 GB (With Snapshot settings with max_snapshot = 5,frequency=45secs)
     Volume4=235 GB
     Volume5=335 GB
     Volume6=200 GB
@@ -58,9 +58,9 @@ System 5000:
 
     Volumes:
 
-    Volume1=250 GB (With Snapshot settings with max_snapshot = 3)
-    Volume2=100 GB (With Snapshot settings with max_snapshot = 5)
-    Volume3=125 GB (With Snapshot settings with max_snapshot = 5)
+    Volume1=250 GB (With Snapshot settings with max_snapshot = 3,frequency=45secs)
+    Volume2=100 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
+    Volume3=125 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
 
     Hosts:
     Host1 
@@ -79,11 +79,11 @@ System 5000:
     Volumes:
 
     Volume1=100 GB 
-    (With Snapshot settings with max_snapshot = 3)
+    (With Snapshot settings with max_snapshot = 3,frequency=45secs)
     (With Replication settings with Synchronous,Target system 5001)
 
     Volume2=75 GB 
-    (With Snapshot settings with max_snapshot = 5)
+    (With Snapshot settings with max_snapshot = 5,,frequency=45secs)
     (With Replication settings with Asynchronous,Target system 5001)
 
     Hosts:
