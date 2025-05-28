@@ -56,7 +56,6 @@ System 5000:
 
     Export Volumes:
         Volume1,Host1, workload_size(4KB)
-        Volume2,Host1, workload_size(32KB)
 
 2. High latency due to replication link issues
 
