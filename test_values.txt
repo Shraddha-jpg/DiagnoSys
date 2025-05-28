@@ -1,0 +1,100 @@
+1. High latency due to high system saturation
+
+System 5000:
+    Max Throughput=400MB/s
+    Max Capacity=2500 GB
+
+    Volumes:
+
+    Volume1=125 GB
+    Volume2=200 GB
+    Volume3=150 GB
+    Volume4=60 GB
+    Volume5=400 GB
+
+    Hosts:
+    Host1 
+    Host2 
+    Host3
+
+    Export Volumes:
+        Volume1,Host1, workload_size(4KB)
+        Volume2,Host1, workload_size(8KB)
+        Volume3,Host2, workload_size(16KB)
+        Volume4,Host2, workload_size(32KB)
+        Volume5,Host3, workload_size(128KB)
+
+
+2. High latency due to high system capacity(Volume Overload)
+
+System 5000:
+    Max Throughput=300MB/s
+    Max Capacity=1500 GB
+
+    Volumes:
+
+    Volume1=125 GB
+    Volume2=65 GB (With Snapshot settings with max_snapshot = 5)
+    Volume3=25 GB (With Snapshot settings with max_snapshot = 5)
+    Volume4=235 GB
+    Volume5=335 GB
+    Volume6=200 GB
+
+    Hosts:
+    Host1 
+    Host2 
+
+    Export Volumes:
+        Volume1,Host1, workload_size(4KB)
+        Volume2,Host1, workload_size(8KB)
+        Volume3,Host2, workload_size(16KB)
+        Volume4,Host2, workload_size(4KB)
+
+3. High latency due to high system capacity(Snapshot Overload)
+
+System 5000:
+    Max Throughput=350MB/s
+    Max Capacity=2000 GB
+
+    Volumes:
+
+    Volume1=250 GB (With Snapshot settings with max_snapshot = 3)
+    Volume2=100 GB (With Snapshot settings with max_snapshot = 5)
+    Volume3=125 GB (With Snapshot settings with max_snapshot = 5)
+
+    Hosts:
+    Host1 
+    Host2 
+
+    Export Volumes:
+        Volume1,Host1, workload_size(4KB)
+        Volume2,Host1, workload_size(32KB)
+
+2. High latency due to replication link issues
+
+System 5000:
+    Max Throughput=350MB/s
+    Max Capacity=1500 GB
+
+    Volumes:
+
+    Volume1=100 GB 
+    (With Snapshot settings with max_snapshot = 3)
+    (With Replication settings with Synchronous,Target system 5001)
+
+    Volume2=75 GB 
+    (With Snapshot settings with max_snapshot = 5)
+    (With Replication settings with Asynchronous,Target system 5001)
+
+    Hosts:
+    Host1 
+    Host2 
+
+    Export Volumes:
+        Volume1,Host1, workload_size(8KB)
+        Volume2,Host2, workload_size(4KB)
+
+System 5001:
+    Max Throughput=250MB/s
+    Max Capacity=2500 GB
+
