@@ -1585,6 +1585,12 @@ function closeLatencyHistory() {
             fetch(`/host/${hostId}`, { method: 'DELETE' }).then(() => { alert("Host deleted"); getHost(); });
         }
 
+        function getSettings() {
+            fetch('/settings/').then(res => res.json()).then(data => {
+                showResponse(data);
+            });
+        }
+
         function createSetting() {
             const name = document.getElementById('setting_name').value;
             const type = document.getElementById('setting_type').value;
