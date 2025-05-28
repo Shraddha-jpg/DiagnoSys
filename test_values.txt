@@ -9,8 +9,6 @@ System 5000:
     Volume1=125 GB
     Volume2=200 GB
     Volume3=150 GB
-    Volume4=60 GB
-    Volume5=400 GB
 
     Hosts:
     Host1 
@@ -18,11 +16,9 @@ System 5000:
     Host3
 
     Export Volumes:
-        Volume1,Host1, workload_size(4KB)
-        Volume2,Host1, workload_size(8KB)
-        Volume3,Host2, workload_size(16KB)
-        Volume4,Host2, workload_size(32KB)
-        Volume5,Host3, workload_size(128KB)
+        Volume1,Host1, workload_size(8KB)
+        Volume2,Host2, workload_size(32KB)
+        Volume3,Host3, workload_size(128KB)
 
 
 2. High latency due to high system capacity(Volume Overload)
@@ -33,12 +29,9 @@ System 5000:
 
     Volumes:
 
-    Volume1=125 GB
-    Volume2=65 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
-    Volume3=25 GB (With Snapshot settings with max_snapshot = 5,frequency=45secs)
-    Volume4=235 GB
-    Volume5=335 GB
-    Volume6=200 GB
+    Volume1=100 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
+    Volume2=75 GB (With Snapshot settings with max_snapshot = 5,frequency=45secs)
+    Volume3=350 GB
 
     Hosts:
     Host1 
@@ -48,7 +41,6 @@ System 5000:
         Volume1,Host1, workload_size(4KB)
         Volume2,Host1, workload_size(8KB)
         Volume3,Host2, workload_size(16KB)
-        Volume4,Host2, workload_size(4KB)
 
 3. High latency due to high system capacity(Snapshot Overload)
 
