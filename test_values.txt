@@ -42,11 +42,11 @@ System 5000:
 
 System 5000:
     Max Throughput=350MB/s
-    Max Capacity=2000 GB
+    Max Capacity=2500 GB
 
     Volumes:
 
-    Volume1=250 GB (With Snapshot settings with max_snapshot = 3,frequency=30secs)
+    Volume1=250 GB (With Snapshot settings with max_snapshot = 2,frequency=30secs)
     Volume2=100 GB (With Snapshot settings with max_snapshot = 4,frequency=30secs)
     Volume3=125 GB (With Snapshot settings with max_snapshot = 6,frequency=30secs)
 
