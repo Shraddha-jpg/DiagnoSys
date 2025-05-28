@@ -5,15 +5,14 @@ System 5000:
     Max Capacity=2500 GB
 
     Volumes:
-
-    Volume1=125 GB
-    Volume2=200 GB
-    Volume3=150 GB
+        Volume1=125 GB
+        Volume2=200 GB
+        Volume3=150 GB
 
     Hosts:
-    Host1 
-    Host2 
-    Host3
+        Host1 
+        Host2 
+        Host3
 
     Export Volumes:
         Volume1,Host1, workload_size(8KB)
@@ -25,51 +24,48 @@ System 5000:
 
 System 5000:
     Max Throughput=300MB/s
-    Max Capacity=1500 GB
+    Max Capacity=2500 GB
 
     Volumes:
-
-    Volume1=100 GB (With Snapshot settings with max_snapshot = 3,frequency=30secs)
-    Volume2=75 GB (With Snapshot settings with max_snapshot = 5,frequency=45secs)
-    Volume3=600 GB
+        Volume1=100 GB (With Snapshot settings with max_snapshot = 3,frequency=30secs)
+        Volume2=75 GB (With Snapshot settings with max_snapshot = 5,frequency=45secs)
+        Volume3=400 GB
 
     Hosts:
-    Host1 
-    Host2 
+        Host1 
+        Host2 
         
 
 3. High latency due to high system capacity(Snapshot Overload)
 
 System 5000:
     Max Throughput=350MB/s
-    Max Capacity=2000 GB
+    Max Capacity=2500 GB
 
     Volumes:
-
-    Volume1=250 GB (With Snapshot settings with max_snapshot = 2,frequency=30secs)
-    Volume2=100 GB (With Snapshot settings with max_snapshot = 4,frequency=30secs)
-    Volume3=125 GB (With Snapshot settings with max_snapshot = 6,frequency=30secs)
+        Volume1=250 GB (With Snapshot settings with max_snapshot = 2,frequency=30secs)
+        Volume2=100 GB (With Snapshot settings with max_snapshot = 4,frequency=30secs)
+        Volume3=125 GB (With Snapshot settings with max_snapshot = 6,frequency=30secs)
 
     Hosts:
-    Host1 
-    Host2 
+        Host1 
+        Host2 
 
     Export Volumes:
         Volume1,Host1, workload_size(4KB)
 
-2. High latency due to replication link issues
+4. High latency due to replication link issues
 
 System 5000:
     Max Throughput=350MB/s
     Max Capacity=1500 GB
 
     Volumes:
-
-    Volume1=100 GB 
-    (With Replication settings with Synchronous,Target system 5001)
-
+        Volume1=100 GB 
+        (With Replication settings with Synchronous,Target system 5001)
+        (Fault Injection: Sleep Time=3, Fault Duration=600 seconds)
     Hosts:
-    Host1 
+        Host1 
 
     Export Volumes:
         Volume1,Host1, workload_size(8KB)
