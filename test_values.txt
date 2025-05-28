@@ -36,10 +36,6 @@ System 5000:
     Hosts:
     Host1 
     Host2 
-
-    Export Volumes:
-        Volume1,Host1, workload_size(4KB)
-        Volume2,Host1, workload_size(8KB)
         
 
 3. High latency due to high system capacity(Snapshot Overload)
