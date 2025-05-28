@@ -25,7 +25,7 @@ System 5000:
 
 System 5000:
     Max Throughput=300MB/s
-    Max Capacity=1500 GB
+    Max Capacity=2500 GB
 
     Volumes:
 
