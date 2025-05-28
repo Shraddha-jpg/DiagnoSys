@@ -46,9 +46,9 @@ System 5000:
 
     Volumes:
 
-    Volume1=250 GB (With Snapshot settings with max_snapshot = 3,frequency=45secs)
-    Volume2=100 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
-    Volume3=125 GB (With Snapshot settings with max_snapshot = 5,frequency=30secs)
+    Volume1=250 GB (With Snapshot settings with max_snapshot = 3,frequency=30secs)
+    Volume2=100 GB (With Snapshot settings with max_snapshot = 4,frequency=30secs)
+    Volume3=125 GB (With Snapshot settings with max_snapshot = 6,frequency=30secs)
 
     Hosts:
     Host1 
