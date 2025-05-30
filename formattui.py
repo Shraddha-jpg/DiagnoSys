@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 
 # === CONFIG ===
 TEXT_PATH = "rca1.txt"
-GROQ_API_KEY = "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" #replace with your groq api key
+GROQ_API_KEY = "" #replace with your groq api key
 GROQ_MODEL = "llama3-8b-8192"
 
 # === STREAMLIT UI SETUP ===
