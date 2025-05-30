@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI
 
 # === CONFIG ===
 TEXT_PATH = "rca1.txt"
-GROQ_API_KEY = "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" #Enter your Groq API key here
+GROQ_API_KEY = "" #Enter your Groq API key here
 GROQ_MODEL = "llama3-8b-8192"
 
 # === LOAD AND CHUNK TEXT FILE ===
