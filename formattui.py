@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 
 # === CONFIG ===
 TEXT_PATH = "rca1.txt"
-GROQ_API_KEY = "" #replace with your groq api key
+GROQ_API_KEY = "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" #replace with your groq api key
 GROQ_MODEL = "llama3-8b-8192"
 
 # === STREAMLIT UI SETUP ===
@@ -96,7 +96,7 @@ def get_relevant_context(port: int, query: str) -> str:
         context_parts.append(f"System Information:\n{json.dumps(system_data, indent=2)}")
 
     # Latest metrics
-    metrics_file = f"{data_dir}/system_metrics_{port}.json"
+    metrics_file = f"{data_dir}/system_metrics.json"
     metrics_data = load_json_file(metrics_file)
     if metrics_data and isinstance(metrics_data, list) and len(metrics_data) > 0:
         latest_metrics = metrics_data[-1]
@@ -118,7 +118,7 @@ def get_relevant_context(port: int, query: str) -> str:
         context_parts.append(f"IO Metrics:\n{json.dumps(io_metrics_data, indent=2)}")
 
     # Replication metrics
-    replication_file = f"{data_dir}/replication_metrics_{port}.json"
+    replication_file = f"{data_dir}/replication_metrics.json"
     replication_data = load_json_file(replication_file)
     if replication_data:
         context_parts.append(f"Replication Metrics:\n{json.dumps(replication_data, indent=2)}")
