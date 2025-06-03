@@ -15,7 +15,7 @@ from typing import TypedDict
 from volume_contribution_calculator import calculate_volume_contribution
 
 # === CONFIG ===
-TEXT_PATH = "rca1.txt"
+TEXT_PATH = "rca2.txt"
 GROQ_API_KEY = ""
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
@@ -53,6 +53,7 @@ class AgentState(TypedDict):
     fault_analysis: Dict[str, Any]
     formatted_report: str
     system_data: Dict[str, Any]
+    system_metrics: Dict[str, Any]  # New field for metrics
 
 # === Agent 1: Data Extraction Agent ===
 def extract_relevant_data(state: AgentState) -> AgentState:
@@ -64,11 +65,13 @@ def extract_relevant_data(state: AgentState) -> AgentState:
     # Load system data
     data_dir = f"data_instance_{port}"
     system_data = {}
+    system_metrics = {}
     if not os.path.exists(data_dir):
         state["context"] = f"⚠️ Warning: Data directory {data_dir} not found"
         state["port"] = port
         state["system_name"] = f"System_{port}"
         state["system_data"] = system_data
+        state["system_metrics"] = system_metrics
         return state
 
     context_parts = []
@@ -89,12 +92,13 @@ def extract_relevant_data(state: AgentState) -> AgentState:
             context_parts.append(f"System Information:\n{json.dumps(system_data, indent=2)}")
 
     # Latest metrics
-    metrics_file = f"{data_dir}/system_metrics_{port}.json"
+    metrics_file = f"{data_dir}/system_metrics.json"
     if os.path.exists(metrics_file):
         with open(metrics_file, 'r') as f:
             metrics_data = json.load(f)
         if metrics_data and isinstance(metrics_data, list) and len(metrics_data) > 0:
-            context_parts.append(f"Latest Metrics:\n{json.dumps(metrics_data[-1], indent=2)}")
+            system_metrics = metrics_data[-1]  # Store latest metrics
+            context_parts.append(f"Latest Metrics:\n{json.dumps(system_metrics, indent=2)}")
 
     # Volumes info
     volumes_file = f"{data_dir}/volume.json"
@@ -111,7 +115,7 @@ def extract_relevant_data(state: AgentState) -> AgentState:
         context_parts.append(f"IO Metrics:\n{json.dumps(io_metrics_data, indent=2)}")
 
     # Replication metrics
-    replication_file = f"{data_dir}/replication_metrics_{port}.json"
+    replication_file = f"{data_dir}/replication_metrics.json"
     if os.path.exists(replication_file):
         with open(replication_file, 'r') as f:
             replication_data = json.load(f)
@@ -135,18 +139,21 @@ def extract_relevant_data(state: AgentState) -> AgentState:
     state["port"] = port
     state["system_name"] = system_name
     state["system_data"] = system_data
+    state["system_metrics"] = system_metrics
     return state
 
 # === Agent 2: Fault Analysis Agent ===
 def analyze_fault(state: AgentState) -> AgentState:
-    """Analyze the fault using rca1.txt logic and system data."""
+    """Analyze the fault using rca2.txt logic and system data."""
     query = state["query"]
     context = state["context"]
     system_data = state["system_data"]
+    system_metrics = state["system_metrics"]
     
     print("\n=== Analyze Fault Inputs ===")
     print(f"Query: {query}")
     print(f"System Data: {json.dumps(system_data, indent=2)}")
+    print(f"System Metrics: {json.dumps(system_metrics, indent=2)}")
 
     # Flatten context for analysis
     def flatten_json(obj, prefix=""):
@@ -182,22 +189,22 @@ def analyze_fault(state: AgentState) -> AgentState:
     json_structure = """{
         "fault_type": "High latency due to high saturation" or "High latency due to high capacity" or "High latency due to replication link issues" or "No fault",
         "details": {
-            "latency": <latency value>,
-            "capacity_percentage": <capacity percentage>,
-            "saturation": <system saturation percentage>,
-            "volume_capacity": <volume capacity percentage>,
-            "snapshot_capacity": <snapshot capacity percentage>,
-            "maximum_capacity": <maximum capacity>,
-            "maximum_throughput": <maximum throughput>,
+            "latency": <latency value from system_metrics>,
+            "capacity_percentage": <capacity percentage inferred from system_metrics and volumes>,
+            "saturation": <saturation percentage from system_metrics>,
+            "volume_capacity": <total volume capacity from volume data>,
+            "snapshot_capacity": <total snapshot capacity from snapshot data>,
+            "maximum_capacity": <maximum capacity from system_data>,
+            "maximum_throughput": <maximum throughput from system_data>,
             "volume_details": [
                 {
                     "volume_id": <volume id>,
                     "name": <volume name>,
-                    "capacity_percentage": <capacity percentage>,
+                    "capacity_percentage": <capacity percentage inferred from volume size and max_capacity>,
                     "size": <size>,
                     "snapshot_count": <snapshot count>,
-                    "throughput": <throughput>
-                    "workload_size": <workload size>
+                    "throughput": <throughput from volume or io_metrics>,
+                    "workload_size": <workload size from volume or io_metrics>
                 }
             ],
             "replication_issues": [
@@ -216,18 +223,19 @@ def analyze_fault(state: AgentState) -> AgentState:
     # Construct analysis prompt
     analysis_prompt = ChatPromptTemplate.from_messages([
         SystemMessage(content=(
-            "You are an RCA assistant. Based on the structured system data and the RCA logic retrieved from rca1.txt, diagnose the root cause of the issue described in the query. "
+            "You are an RCA assistant. Based on the structured system data, system metrics, and RCA logic from rca2.txt, diagnose the root cause of the issue described in the query. "
             "Steps:\n"
-            "1. Apply the fault diagnosis rules from rca1.txt to determine the fault type\n"
-            "2. Return only the highest causing fault.\n"
-            "3. Include relevant details such as latency, capacity, saturation, volume, snapshot, and replication information.\n"
-            "4. If replication metrics are available, check for replication impairment issues as per rca1.txt.\n"
-            "5. Ensure the response is based solely on rca1.txt logic and system data, without assuming hardcoded thresholds.\n"
-            "6. Check latency, saturation, and capacity values before retrieving relevant chunks.\n"
+            "1. Apply the fault diagnosis rules from rca2.txt to determine the fault type.\n"
+            "2. Use system_metrics to infer latency, saturation, and capacity_percentage where available.\n"
+            "3. Return only the highest causing fault.\n"
+            "4. Include relevant details such as latency, capacity, saturation, volume, snapshot, and replication information.\n"
+            "5. If replication metrics are available, check for replication impairment issues as per rca2.txt.\n"
+            "6. Ensure the response is based solely on rca2.txt logic, system_data, and system_metrics, without assuming hardcoded thresholds.\n"
             "7. Latency < 3ms indicates no fault.\n"
-            "8. Return a valid JSON object with the structure provided, using numeric values for all fields (e.g., compute percentages like (size / max_capacity) * 100 directly).\n"
-            "9. Do not include Python expressions (e.g., (5 / 20) * 100) in the JSON; compute the values explicitly.\n"
-            "10.Do proper reasoning and analysis based on the provided system data and rca1.txt logic before reaching a conclusion about the type of fault.\n"
+            "8. Return a valid JSON object with the structure provided, using numeric values for all fields (e.g., compute percentages directly).\n"
+            "9. Do not include Python expressions (e.g., (5 / 20) * 100) or additional text in the JSON; compute the values explicitly.\n"
+            "10. Perform proper reasoning and analysis based on the provided data and rca2.txt logic before concluding the fault type; do not make assumptions.\n"
+            
         )),
         HumanMessage(content=(
             f"Query: {query}\n\n"
@@ -241,7 +249,7 @@ def analyze_fault(state: AgentState) -> AgentState:
     context_with_rca = "\n".join([doc.page_content for doc in relevant_docs])
     
     # Update the system message with RCA context
-    system_message = analysis_prompt.messages[0].content + f"\nRCA Logic from rca1.txt:\n{context_with_rca}"
+    system_message = analysis_prompt.messages[0].content + f"\nRCA Logic from rca2.txt:\n{context_with_rca}"
     
     # Create the final messages list
     messages = [
@@ -290,153 +298,6 @@ def analyze_fault(state: AgentState) -> AgentState:
 
     state["fault_analysis"] = fault_analysis
     return state
-    """Analyze the fault using rca1.txt logic and system data."""
-    query = state["query"]
-    context = state["context"]
-    system_data = state["system_data"]
-    
-    print("\n=== Analyze Fault Inputs ===")
-    print(f"Query: {query}")
-    print(f"System Data: {json.dumps(system_data, indent=2)}")
-
-    # Flatten context for analysis
-    def flatten_json(obj, prefix=""):
-        lines = []
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                full_key = f"{prefix}.{k}" if prefix else k
-                if isinstance(v, (dict, list)):
-                    lines.extend(flatten_json(v, prefix=full_key))
-                else:
-                    lines.append(f"{full_key} = {v}")
-        elif isinstance(obj, list):
-            for idx, item in enumerate(obj):
-                full_key = f"{prefix}[{idx}]"
-                if isinstance(item, (dict, list)):
-                    lines.extend(flatten_json(item, prefix=full_key))
-                else:
-                    lines.append(f"{full_key} = {item}")
-        elif isinstance(obj, str):
-            sections = obj.split("\n\n")
-            for section in sections:
-                if section.strip():
-                    section_lines = section.split('\n')
-                    section_title = section_lines[0].strip()
-                    section_content = section
-                    lines.append(f"{prefix}.{section_title} = {section_content}")
-        return lines
-
-    flattened = flatten_json(context) if context else []
-    formatted_input = "\n".join(flattened)
-
-    # JSON structure for fault analysis
-    json_structure = """{
-        "fault_type": "High latency due to high saturation" or "High latency due to high capacity" or "High latency due to replication link issues" or "No fault",
-        "details": {
-            "latency": <latency value>,
-            "capacity_percentage": <capacity percentage>,
-            "saturation": <system saturation percentage>,
-            "volume_capacity": <volume capacity percentage>,
-            "snapshot_capacity": <snapshot capacity percentage>,
-            "maximum_capacity": <maximum capacity>,
-            "maximum_throughput": <maximum throughput>,
-            "volume_details": [
-                {
-                    "volume_id": <volume id>,
-                    "name": <volume name>,
-                    "capacity_percentage": <capacity percentage>,
-                    "size": <size>,
-                    "snapshot_count": <snapshot count>,
-                    "throughput": <throughput>
-                }
-            ],
-            "replication_issues": [
-                {
-                    "volume_id": <volume id>,
-                    "volume_name": <volume name>,
-                    "target_id": <target system id>,
-                    "target_system_name": <target system name>,
-                    "latency": <latency value>,
-                    "timestamp": <timestamp>
-                }
-            ]
-        }
-    }"""
-
-    # Construct analysis prompt
-    analysis_prompt = ChatPromptTemplate.from_messages([
-        SystemMessage(content=(
-            "You are an RCA assistant. Based on the structured system data and the RCA logic retrieved from rca1.txt, diagnose the root cause of the issue described in the query. "
-            "Steps:\n"
-            "1. Apply the fault diagnosis rules from rca1.txt to determine the fault type, prioritizing replication issues when system latency is high and saturation/capacity are low.\n"
-            "2. Identify the bully volume (highest contributor to the fault) based on capacity or saturation.\n"
-            "3. Return only the highest causing fault.\n"
-            "4. Include relevant details such as latency, capacity, saturation, volume, snapshot, and replication information.\n"
-            "5. If replication metrics are available, check for replication impairment issues as per rca1.txt.\n"
-            "6. Ensure the response is based solely on rca1.txt logic and system data, without assuming hardcoded thresholds.\n"
-            "7. Check latency, saturation, and capacity values before retrieving relevant chunks.\n"
-            "8. Latency < 3ms indicates no fault.\n"
-            "Return a JSON object with the structure provided."
-        )),
-        HumanMessage(content=(
-            f"Query: {query}\n\n"
-            f"Extracted system data:\n{formatted_input}\n\n"
-            f"Expected JSON structure:\n{json_structure}"
-        ))
-    ])
-
-    # Retrieve relevant RCA chunks
-    relevant_docs = retriever.invoke(query)
-    context_with_rca = "\n".join([doc.page_content for doc in relevant_docs])
-    
-    # Update the system message with RCA context
-    system_message = analysis_prompt.messages[0].content + f"\nRCA Logic from rca1.txt:\n{context_with_rca}"
-    
-    # Create the final messages list
-    messages = [
-        SystemMessage(content=system_message),
-        HumanMessage(content=analysis_prompt.messages[1].content)
-    ]
-    
-    # Invoke the LLM with the messages
-    print("\n=== Invoking LLM for Fault Analysis ===")
-    response = llm.invoke(messages)
-    print(f"Raw LLM Response: {response.content}")
-    
-    # Try to parse the JSON, handling mixed text+JSON response
-    fault_analysis = None
-    try:
-        fault_analysis = json.loads(response.content)
-    except json.JSONDecodeError:
-        print("Error: Failed to parse LLM response as JSON, attempting to extract JSON from raw_result")
-        # Extract JSON from raw_result if present
-        raw_result = response.content
-        json_match = re.search(r'```json\n([\s\S]*?)\n```', raw_result)
-        if json_match:
-            try:
-                fault_analysis = json.loads(json_match.group(1))
-            except json.JSONDecodeError as e:
-                print(f"Error: Failed to parse extracted JSON: {e}")
-                fault_analysis = {"error": "Invalid analysis output", "raw_result": raw_result}
-        else:
-            fault_analysis = {"error": "Invalid analysis output", "raw_result": raw_result}
-
-    # Calculate volume contributions
-    if not fault_analysis.get("error"):
-        if not system_data.get("max_capacity"):
-            print(f"Warning: max_capacity not found in system_data for port {state['port']}")
-        try:
-            fault_analysis = calculate_volume_contribution(fault_analysis, system_data)
-            print("\n=== Fault Analysis with Volume Contributions ===")
-            print(json.dumps(fault_analysis, indent=2))
-        except Exception as e:
-            print(f"Error in volume contribution calculation: {e}")
-            fault_analysis["error"] = f"Volume contribution calculation failed: {str(e)}"
-    else:
-        print(f"Error: Skipping volume contribution calculation due to invalid fault analysis: {fault_analysis}")
-
-    state["fault_analysis"] = fault_analysis
-    return state
 
 # === Agent 3: Response Formatting Agent ===
 def format_response(state: AgentState) -> AgentState:
@@ -456,18 +317,18 @@ def format_response(state: AgentState) -> AgentState:
             "For replication issues, highlight the primary affected volume with 100% contribution. "
             "For saturation faults, include saturation_contribution from volume_contributions. "
             "If volume_contributions is empty or missing, indicate that volume contribution data is unavailable and suggest checking system configuration.\n"
+            "Use the fault_analysis numbers only, don't make assumptions about the calculations.\n"
             "Example format:\n"
             f"Fault Report for {system_name} (Port: {port})\n"
             "Fault Type: <type>\n"
             "Key Details: <metrics>\n"
             "Replication Issues: <details>\n"
-            "Volume Information: <details with size in GB>\n"
+            "Volume Information: <details with volume size in GB, workload size in KB if available>\n"
             "Snapshot Information: <details>\n"
             "Volume Contributions:\n"
-            "- <volume_name> (<volume_id>): capacity contribution:<contribution_percentage>% (saturation contribution:<saturation_contribution>% saturation if applicable)\n"
-            "Bully Volume: <volume and contribution from volume_contributions for the applicable fault(example: if the fault is due to capacity include capacity contribution only and the same goes for the other types of faults also)>\n"
+            "- <volume_name> (<volume_id>): capacity contribution: <contribution_percentage>% (saturation contribution: <saturation_contribution>% if applicable)\n"
+            "Bully Volume: <volume and contribution from volume_contributions for the applicable fault>\n"
             "Next Actions: <detailed actions to be taken>\n"
-            
         )),
         HumanMessage(content=f"JSON Analysis:\n{json.dumps(fault_analysis, indent=2)}")
     ])
@@ -513,7 +374,7 @@ def main():
             break
 
         try:
-            state = {"query": query, "port": 0, "system_name": "", "context": "", "fault_analysis": {}, "formatted_report": "", "system_data": {}}
+            state = {"query": query, "port": 0, "system_name": "", "context": "", "fault_analysis": {}, "formatted_report": "", "system_data": {}, "system_metrics": {}}
             result = app.invoke(state)
             print("\n" + "="*50)
             print(result["formatted_report"])
