@@ -91,7 +91,7 @@ for tool in TOOLS_CONFIG:
         print(f"Error loading tool {tool_name} from {tool_path}: {e}")
 
 # === CONFIG ===
-GROQ_API_KEY = "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"
+GROQ_API_KEY = ""
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # === Initialize LLM ===
