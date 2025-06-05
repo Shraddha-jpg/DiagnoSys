@@ -14,9 +14,7 @@ class System:
             "id": self.id,
             "name": self.name,
             "max_throughput": self.max_throughput,
-            "max_capacity": self.max_capacity,
-            "saturation": self.saturation,
-            "cpu_usage": self.cpu_usage
+            "max_capacity": self.max_capacity
         }
 
 
@@ -133,3 +131,4 @@ class Settings:
             "max_snapshots": self.max_snapshots  # 🔹 Added to dictionary
         }
         return data
+

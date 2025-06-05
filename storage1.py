@@ -165,7 +165,6 @@ class StorageManager:
             "throughput_used": 0,
             "capacity_used": 0,
             "saturation": 0,
-            "cpu_usage": 0,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
@@ -491,8 +490,15 @@ class StorageManager:
 
         # Start background tasks: host I/O, snapshots, and replication.
         self.start_host_io(volume_id)
+        
+        # Start snapshots if snapshot settings exist
         if volume.get("snapshot_settings"):
-            self.start_snapshot(volume_id, frequencies=volume["snapshot_settings"].get("frequencies", []))
+            snapshot_frequencies = []
+            for setting_id, frequency in volume["snapshot_settings"].items():
+                snapshot_frequencies.append(frequency)
+            print(f"🚀 Starting snapshots for volume {volume_id} with frequencies {snapshot_frequencies}")
+            self.start_snapshot(volume_id, snapshot_frequencies)
+            
         # If replication settings exist, start replication for this volume.
         if volume.get("replication_settings"):
             self.start_replication(volume_id)
@@ -565,27 +571,33 @@ class StorageManager:
         worker_thread.start()
         print(f"Background thread started for volume {volume_id}")
 
-    def unexport_volume(self, volume_id, reason="Manual unexport"):
-        """
-        Unexport a volume and cleanup all associated processes
-        """
+    def unexport_volume(self, volume_id, reason="User request"):
+        """Unexports a volume from its current host."""
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Unexporting volume {volume_id}: {reason}")
+
+        # Load volumes
         volumes = self.load_resource("volume")
         volume = next((v for v in volumes if v["id"] == volume_id), None)
-        if not volume:
-            raise ValueError("Invalid volume ID")
-        if not volume.get("is_exported", False):
-            raise ValueError("Volume is not exported")
 
-        # First cleanup all processes
+        if not volume:
+            raise ValueError(f"Volume {volume_id} not found")
+
+        if not volume.get("is_exported"):
+            print(f"Volume {volume_id} is not exported")
+            return
+
+        # Stop all background processes for this volume
         self.cleanup_volume_processes(volume_id, reason=reason)
 
-        # Then update volume state
+        # Update volume state
         volume["is_exported"] = False
         volume["exported_host_id"] = None
-        volume["workload_size"] = None
+        volume["workload_size"] = 0
 
-        self.logger.info(f"Volume {volume_id} unexported: {reason}", global_log=True)
+        # Save changes
         self.update_resource("volume", volume_id, volume)
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Volume {volume_id} unexported: {reason}")
         return f"Volume {volume_id} unexported successfully"
 
     def start_snapshot(self, volume_id, frequencies):
@@ -606,11 +618,21 @@ class StorageManager:
 
         def snapshot_worker(frequency):
             while True:
+                # Check if we should stop
+                if self.snapshot_threads[volume_id][frequency]["stop"]:
+                    print(f"Stopping snapshot thread for volume {volume_id} at {frequency} sec interval")
+                    break
+
                 volumes = self.load_resource("volume")
                 volume = next((v for v in volumes if v["id"] == volume_id), None)
 
                 if not volume:
                     print(f"⚠️ Volume {volume_id} not found. Stopping snapshot process for {frequency} sec interval.")
+                    break
+
+                # Check if volume is still exported
+                if not volume.get("is_exported", False):
+                    print(f"⚠️ Volume {volume_id} is no longer exported. Stopping snapshot process for {frequency} sec interval.")
                     break
 
                 # Initialize snapshot count if not set
@@ -917,6 +939,42 @@ class StorageManager:
         stop_log = f"Stopped {replication_type} replication for volume {volume_id} to target {target.get('name')}"
         self.logger.info(stop_log, global_log=True)
 
+    # def cleanup_volume_processes(self, volume_id, reason="", notify_targets=True):
+    #     """
+    #     Cleanup all processes for a volume and notify targets if needed
+    #     """
+    #     try:
+    #         volume = next((v for v in self.load_resource("volume") if v["id"] == volume_id), None)
+    #         if not volume:
+    #             return
+
+    #         # Stop replication tasks if running
+    #         if volume_id in self.replication_tasks:
+    #             self.replication_tasks[volume_id].set()  # Signal thread to stop
+    #             if volume.get("replication_settings") and notify_targets:
+    #                 # Notify all targets about replication stop
+    #                 for rep_setting in volume.get("replication_settings", []):
+    #                     target = rep_setting.get("replication_target", {})
+    #                     target_port = next((s["port"] for s in self.get_all_systems() 
+    #                                      if s["id"] == target.get("id")), None)
+    #                     if target_port:
+    #                         try:
+    #                             url = f"http://localhost:{target_port}/replication-stop"
+    #                             requests.post(url, json={
+    #                                 "volume_id": volume_id,
+    #                                 "reason": reason,
+    #                                 "sender": self.data_dir
+    #                             }, timeout=5)
+    #                         except Exception as e:
+    #                             self.logger.error(f"Failed to notify target {target.get('name')}: {str(e)}", 
+    #                                            global_log=True)
+
+    #         # Log the cleanup
+    #         self.logger.info(f"Stopped all processes for volume {volume_id}: {reason}", global_log=True)
+
+    #     except Exception as e:
+    #         self.logger.error(f"Error during cleanup for volume {volume_id}: {str(e)}", global_log=True)
+
     def cleanup_volume_processes(self, volume_id, reason="", notify_targets=True):
         """
         Cleanup all processes for a volume and notify targets if needed
@@ -926,6 +984,16 @@ class StorageManager:
             if not volume:
                 return
 
+            # Stop snapshot threads if running
+            if volume_id in self.snapshot_threads:
+                print(f"Stopping snapshot threads for volume {volume_id}")
+                for freq in self.snapshot_threads[volume_id]:
+                    self.snapshot_threads[volume_id][freq]["stop"] = True
+                # Wait a moment for threads to stop
+                time.sleep(1)
+                # Remove the volume's snapshot threads
+                del self.snapshot_threads[volume_id]
+
             # Stop replication tasks if running
             if volume_id in self.replication_tasks:
                 self.replication_tasks[volume_id].set()  # Signal thread to stop
@@ -934,7 +1002,7 @@ class StorageManager:
                     for rep_setting in volume.get("replication_settings", []):
                         target = rep_setting.get("replication_target", {})
                         target_port = next((s["port"] for s in self.get_all_systems() 
-                                         if s["id"] == target.get("id")), None)
+                                        if s["id"] == target.get("id")), None)
                         if target_port:
                             try:
                                 url = f"http://localhost:{target_port}/replication-stop"
@@ -945,7 +1013,7 @@ class StorageManager:
                                 }, timeout=5)
                             except Exception as e:
                                 self.logger.error(f"Failed to notify target {target.get('name')}: {str(e)}", 
-                                               global_log=True)
+                                            global_log=True)
 
             # Log the cleanup
             self.logger.info(f"Stopped all processes for volume {volume_id}: {reason}", global_log=True)
@@ -1216,8 +1284,7 @@ class StorageManager:
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "throughput_used": total_throughput,
                 "capacity_used": total_capacity,
-                "saturation": saturation,
-                "cpu_usage": min(100, saturation),  # CPU usage correlates with saturation
+                "saturation": saturation, 
                 "volume_capacity": volume_capacity,
                 "snapshot_capacity": snapshot_capacity,  # Track snapshot capacity separately
                 "capacity_percentage": capacity_pct
