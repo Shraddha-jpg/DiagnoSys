@@ -1333,7 +1333,7 @@ class StorageManager:
                     self.cleanup()
                 except Exception as e:
                     self.logger.error(f"Error in cleanup thread: {str(e)}", global_log=True)
-                time.sleep(30)  # Run cleanup every 30 seconds
+                time.sleep(10)  # Run cleanup every 10 seconds
 
         self.cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
         self.cleanup_thread.start()
