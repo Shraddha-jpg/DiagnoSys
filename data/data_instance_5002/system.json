@@ -1,0 +1,9 @@
+[
+    {
+        "id": "2d68722e-eaf2-4014-853b-49043b37ae64",
+        "name": "5002",
+        "max_throughput": "300",
+        "max_capacity": "2000",
+        "saturation": 0
+    }
+]

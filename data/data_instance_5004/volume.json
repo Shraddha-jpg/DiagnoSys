@@ -1,24 +1,13 @@
 [
     {
-        "id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
-        "name": "v1",
-        "system_id": "a512bf6b-b9e3-40cc-ae2b-4b3b94da5569",
+        "id": "40557353-1d1a-4b42-83fb-2a8df760ad74",
+        "name": "rep-09f696d9",
+        "system_id": "abfe6a20-9fdd-4161-bb53-2a374c105415",
         "size": 100,
-        "is_exported": true,
-        "exported_host_id": "51e7ce0b-9973-4464-b556-a78a1e3f4a30",
-        "workload_size": 8,
+        "is_exported": false,
+        "exported_host_id": null,
+        "workload_size": 0,
         "snapshot_settings": {},
-        "replication_settings": [
-            {
-                "setting_id": "96a4337a-cdec-421d-b57f-5f7b2f74b61c",
-                "replication_type": "synchronous",
-                "delay_sec": 0,
-                "replication_target": {
-                    "id": "abfe6a20-9fdd-4161-bb53-2a374c105415",
-                    "name": "System 5005"
-                }
-            }
-        ],
-        "snapshot_frequencies": []
+        "replication_settings": []
     }
 ]

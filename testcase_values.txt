@@ -44,56 +44,52 @@ Next Actions: Investigate and optimize the workload on v3 to reduce its saturati
 ====================================================================================================
 
 
-======================== PENDING ==========================================
-
-PROBLEM 2 : HIGH LATENCY DUE TO HIGH SYSTEM SATURATION (VOLUME OVERLOAD)
+PROBLEM 2 : HIGH LATENCY DUE TO HIGH SYSTEM CAPACITY (SNAPSHOT OVERLOAD)
 
 TESTCASE :
 
 System 5002:
-    Max Throughput=300MB/s
-    Max Capacity=2500 GB
+    Max Throughput = 300 MB/s
+    Max Capacity = 2000 GB
 
     Volumes:
-        Volume1=100 GB (With Snapshot settings with max_snapshot = 3,frequency=30secs)
-        Volume2=75 GB (With Snapshot settings with max_snapshot = 5,frequency=45secs)
-        Volume3=400 GB
+        Volume1 = 300 GB (With Snapshot settings: max_snapshots = 3, frequency = 30 secs)
+        Volume2 = 200 GB (With Snapshot settings: max_snapshots = 1, frequency = 60 secs)
+        Volume3 = 100 GB (With Snapshot settings: max_snapshots = 1, frequency = 60 secs)
 
     Hosts:
-        Host1 
-        Host2 
+        Host1
+        Host2
 
-INPUT : 
+    Export Volumes:
+        Volume1, Host1, workload_size = 32KB
+        Volume2, Host2, workload_size = 8KB
 
-OUTPUT :
-        
-PROBLEM 3 : HIGH LATENCY DUE TO HIGH SYSTEM SATURATION (SNAPSHOT OVERLOAD)
+INPUT : Why is system 5002 experiencing high latency?
+
+EXPECTED OUTPUT : 
+
+====================================================================================================
+Fault Report for System 5002
+Fault Type: High latency due to high capacity
+Key Details: Latency of 3.0 ms, capacity utilization at 85.0%, and saturation at 26.04%
+Volume Information: 
+- v1 (a08867ba-1d52-4ffe-a6a9-3bc61e50e752): 300 GB, workload size 32 KB, throughput 62.5 MB/s
+- v2 (5e191667-96e4-42ae-9d79-8d0ef8ac84da): 200 GB, workload size 8 KB, throughput 15.625 MB/s
+- v3 (961ec5b8-aa28-4620-97bb-09c0976a4fde): 100 GB, workload size 0 KB, throughput 0 MB/s
+Volume Contributions:
+- v1 (a08867ba-1d52-4ffe-a6a9-3bc61e50e752): capacity contribution: 60.0% 
+- v2 (5e191667-96e4-42ae-9d79-8d0ef8ac84da): capacity contribution: 20.0% 
+- v3 (961ec5b8-aa28-4620-97bb-09c0976a4fde): capacity contribution: 5.0% 
+Bully Volume: v1 (a08867ba-1d52-4ffe-a6a9-3bc61e50e752) with a contribution of 60.0%
+Next Actions: Reduce the capacity utilization by either increasing the maximum capacity or optimizing the workload distribution among volumes. Consider relocating or optimizing the workload on v1 to reduce its contribution to the high latency issue. Monitor the system's performance after implementing these changes to ensure the latency returns to acceptable levels.
+====================================================================================================
+
+PROBLEM 3 : HIGH LATENCY DUE TO REPLICATION LINK ISSUES
 
 TESTCASE :
 
 System 5003:
-    Max Throughput=350MB/s
-    Max Capacity=2500 GB
-
-    Volumes:
-        Volume1=250 GB (With Snapshot settings with max_snapshot = 2,frequency=30secs)
-        Volume2=100 GB (With Snapshot settings with max_snapshot = 4,frequency=30secs)
-        Volume3=125 GB (With Snapshot settings with max_snapshot = 6,frequency=30secs)
-
-    Hosts:
-        Host1 
-        Host2 
-
-    Export Volumes:
-        Volume1,Host1, workload_size(4KB)
-
-======================== PENDING ==========================================
-
-PROBLEM 4 : HIGH LATENCY DUE TO REPLICATION LINK Issues
-
-TESTCASE :
-
-System 5004:
     Max Throughput=350MB/s
     Max Capacity=1500 GB
 
@@ -107,12 +103,12 @@ System 5004:
     Export Volumes:
         Volume1,Host1, workload_size(8KB)
 
-INPUT : Why is system 5004 experiencing high latency?
+INPUT : Why is system 5003 experiencing high latency?
 
-OUTPUT : 
+EXPECTED OUTPUT : 
 
 ====================================================================================================
-Fault Report for System 5004
+Fault Report for System 5003
 Fault Type: No fault
 Key Details: Latency of 1.0 ms, capacity usage at 6.67%, and saturation at 4.46. The system has a volume capacity of 100 GB and a maximum capacity of 1500 GB, with a maximum throughput of 350 MB/s.
 Volume Information: 
@@ -120,17 +116,18 @@ Volume Information:
 Volume Contributions:
 - v1 (09f696d9-4d3f-4660-9864-051a5c4396ef): capacity contribution: 6.67% (saturation contribution: 0.0%)
 Next Actions: No actions are required as the system is operating within normal parameters. Continue to monitor the system for any changes in latency, capacity, or saturation.
+====================================================================================================
 
-System 5005:
+System 5004:
     Max Throughput=250MB/s
     Max Capacity=2500 GB
 
-INPUT : Why is system 5005 experiencing high latency?
+INPUT : Why is system 5004 experiencing high latency?
 
 EXPECTED OUTPUT : 
 
 ====================================================================================================
-Fault Report for System 5005
+Fault Report for System 5004
 Fault Type: High latency due to replication link issues
 Key Details: Latency of 1.0 ms, capacity usage at 4.0%, and no saturation.
 Replication Issues: 

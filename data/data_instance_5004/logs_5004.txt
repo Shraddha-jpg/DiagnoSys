@@ -1,31 +1,21 @@
-[2025-05-28 21:34:32][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:34:57][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 4.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:34:58][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 3.024ms)
-[2025-05-28 21:35:02][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:35:27][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 4.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:35:28][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 3.024ms)
-[2025-05-28 21:35:32][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:35:57][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:35:58][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.047ms)
-[2025-05-28 21:36:02][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:36:28][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:36:28][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.044ms)
-[2025-05-28 21:36:32][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:36:58][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:36:58][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.04ms)
-[2025-05-28 21:37:02][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:37:28][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:37:28][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.047ms)
-[2025-05-28 21:37:32][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:37:58][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:37:59][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.035ms)
-[2025-05-28 21:38:02][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:38:28][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:38:29][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.049ms)
-[2025-05-28 21:38:32][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:38:58][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:38:59][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.04ms)
-[2025-05-28 21:39:02][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
-[2025-05-28 21:39:28][INFO] Volume: 09f696d9-4d3f-4660-9864-051a5c4396ef, Host: 51e7ce0b-9973-4464-b556-a78a1e3f4a30, IOPS: 2000, Latency: 1.0ms, Throughput: 15.625 MB/s
-[2025-05-28 21:39:29][INFO] Active synchronous replication for volume 09f696d9-4d3f-4660-9864-051a5c4396ef to target System 5005 (TimeTaken: 0.029ms)
-[2025-05-28 21:39:32][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:34:43][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:34:58][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 3.024ms)
+[2025-05-28 21:35:13][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:35:28][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 3.024ms)
+[2025-05-28 21:35:43][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:35:58][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.047ms)
+[2025-05-28 21:36:13][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:36:28][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.044ms)
+[2025-05-28 21:36:43][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:36:58][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.04ms)
+[2025-05-28 21:37:13][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:37:28][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.047ms)
+[2025-05-28 21:37:43][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:37:59][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.035ms)
+[2025-05-28 21:38:13][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:38:29][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.049ms)
+[2025-05-28 21:38:43][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:38:59][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.04ms)
+[2025-05-28 21:39:13][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
+[2025-05-28 21:39:29][INFO] Received synchronous replication data for volume rep-09f696d9 from data/data_instance_5004 (latency: 0.029ms)
+[2025-05-28 21:39:43][CLEANUP] Cleanup complete: No snapshots needed removal, Capacity: 100.00 GB
