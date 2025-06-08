@@ -142,7 +142,7 @@ class StorageManager:
             metrics_data: Dictionary with metrics to append to the timeseries
         """
         # Ensure required fields exist (provide defaults if missing)
-        required_keys = ["throughput_used", "capacity_used", "saturation", "cpu_usage"]
+        required_keys = ["throughput_used", "capacity_used", "saturation"]
         for key in required_keys:
             if key not in metrics_data:
                 metrics_data[key] = 0
