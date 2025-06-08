@@ -1,0 +1,79 @@
+[
+    {
+        "timestamp": "2025-05-28 21:36:32",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    },
+    {
+        "timestamp": "2025-05-28 21:37:02",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    },
+    {
+        "timestamp": "2025-05-28 21:37:32",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    },
+    {
+        "timestamp": "2025-05-28 21:38:02",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    },
+    {
+        "timestamp": "2025-05-28 21:38:32",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    },
+    {
+        "timestamp": "2025-05-28 21:39:02",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    },
+    {
+        "timestamp": "2025-05-28 21:39:32",
+        "throughput_used": 15.625,
+        "capacity_used": 100.0,
+        "saturation": 4.464285714285714,
+        "cpu_usage": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "capacity_percentage": 6.666666666666667,
+        "current_latency": 1.0
+    }
+]

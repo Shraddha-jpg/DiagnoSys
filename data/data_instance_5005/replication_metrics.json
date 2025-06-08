@@ -1,0 +1,182 @@
+[
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:36:58",
+        "throughput": 161.5,
+        "latency": 0.04,
+        "io_count": 215,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:37:08",
+        "throughput": 112.0,
+        "latency": 0.042,
+        "io_count": 215,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:37:18",
+        "throughput": 188.0,
+        "latency": 0.025,
+        "io_count": 194,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:37:28",
+        "throughput": 231.0,
+        "latency": 0.047,
+        "io_count": 481,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:37:38",
+        "throughput": 218.5,
+        "latency": 0.021,
+        "io_count": 150,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:37:49",
+        "throughput": 203.5,
+        "latency": 0.023,
+        "io_count": 132,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:37:59",
+        "throughput": 165.5,
+        "latency": 0.035,
+        "io_count": 466,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:38:09",
+        "throughput": 210.5,
+        "latency": 0.044,
+        "io_count": 452,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:38:19",
+        "throughput": 209.0,
+        "latency": 0.023,
+        "io_count": 243,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:38:29",
+        "throughput": 236.0,
+        "latency": 0.049,
+        "io_count": 315,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:38:39",
+        "throughput": 153.5,
+        "latency": 0.048,
+        "io_count": 322,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:38:49",
+        "throughput": 94.0,
+        "latency": 0.041,
+        "io_count": 320,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:38:59",
+        "throughput": 100.0,
+        "latency": 0.04,
+        "io_count": 114,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:39:09",
+        "throughput": 88.0,
+        "latency": 0.021,
+        "io_count": 309,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:39:19",
+        "throughput": 40.5,
+        "latency": 0.011,
+        "io_count": 378,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:39:29",
+        "throughput": 164.0,
+        "latency": 0.029,
+        "io_count": 156,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:39:39",
+        "throughput": 158.5,
+        "latency": 0.024,
+        "io_count": 129,
+        "replication_type": "synchronous"
+    },
+    {
+        "volume_id": "09f696d9-4d3f-4660-9864-051a5c4396ef",
+        "target_system_id": "5004",
+        "host_id": "",
+        "timestamp": "2025-05-28 21:39:49",
+        "throughput": 36.0,
+        "latency": 0.019,
+        "io_count": 469,
+        "replication_type": "synchronous"
+    }
+]
