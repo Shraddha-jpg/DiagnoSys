@@ -843,6 +843,7 @@ def replication_receive():
         latency = data.get('latency', 0)
         source_volume = data.get('source_volume', {})
         should_log = data.get('should_log', True)
+        source_host_id = data.get('host_id', '')  # Get host_id from source system
         
         # Validate required data
         if not volume_id:
@@ -852,13 +853,17 @@ def replication_receive():
         target_volume_name = f"rep-{volume_id[:8]}"
         volumes = storage_mgr.load_resource("volume")
         target_volume = next((v for v in volumes if v.get("name") == target_volume_name), None)
-        source_system_id = sender.split('_')[-1]  # Extract the system ID from the sender
         
-        # Metrics to record
+        # Get local system info (this target system)
+        systems = storage_mgr.load_resource("system")
+        local_system = systems[0] if systems else None
+        local_system_id = local_system["id"] if local_system else "unknown"
+        
+        # Metrics to record - target system should record itself as the target
         new_metric = {
             "volume_id": volume_id,
-            "target_system_id": source_system_id,
-            "host_id": "", # Will be populated by the new update_replication_metrics method
+            "target_system_id": local_system_id,  # This target system's ID
+            "host_id": source_host_id,  # Host ID from the source system
             "timestamp": timestamp,
             "throughput": throughput,
             "latency": latency,
@@ -867,13 +872,9 @@ def replication_receive():
         }
         
         # Save the replication metric
-        storage_mgr.update_replication_metrics(volume_id, source_system_id, new_metric)
+        storage_mgr.update_replication_metrics(volume_id, local_system_id, new_metric)
         
         if not target_volume:
-            # Get local system info
-            systems = storage_mgr.load_resource("system")
-            local_system = systems[0] if systems else None
-            
             if local_system:
                 # Create new volume with target system specifics
                 new_volume = {

@@ -872,6 +872,7 @@ class StorageManager:
                         "replication_type": replication_type,
                         "should_log": should_log,
                         "latency": total_time_ms,  # Send the calculated time to target
+                        "host_id": volume.get("exported_host_id", ""),  # Include host_id from source
                         "source_volume": {
                              "id": volume["id"],
                              "name": volume["name"],
@@ -1017,7 +1018,9 @@ class StorageManager:
         new_metric = {
             "volume_id": volume_id,
             "target_system_id": target_id,
-            "host_id": self._get_volume_host_id(volume_id),
+            # Prioritize host_id from metric_data if available (e.g., from replication_receive)
+            # Otherwise, fall back to looking it up on the current system.
+            "host_id": metric_data.get("host_id") if "host_id" in metric_data else self._get_volume_host_id(volume_id),
             "timestamp": metric_data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
             "throughput": metric_data.get("throughput", 0),
             "latency": metric_data.get("latency", 0),
