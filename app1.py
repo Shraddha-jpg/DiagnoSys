@@ -844,6 +844,7 @@ def replication_receive():
         source_volume = data.get('source_volume', {})
         should_log = data.get('should_log', True)
         source_host_id = data.get('host_id', '')  # Get host_id from source system
+        io_count = data.get('io_count', 0)  # Get io_count from source system
         
         # Validate required data
         if not volume_id:
@@ -867,7 +868,7 @@ def replication_receive():
             "timestamp": timestamp,
             "throughput": throughput,
             "latency": latency,
-            "io_count": random.randint(50, 500),  # Simulated I/O count
+            "io_count": io_count,  # Use io_count from source system
             "replication_type": replication_type
         }
         

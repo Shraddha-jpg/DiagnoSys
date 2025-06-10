@@ -45,9 +45,9 @@ class StorageManager:
         self.replication_faults = {}
 
         # Add these class constants at the start of __init__
-        self.IO_SIZE_KB = 8  # Default I/O size in KB
-        self.FIXED_IOPS = 2000  # Fixed IOPS for all volumes
-        self.IO_SIZE_OPTIONS = [4, 8, 16, 32, 64, 128]  # Valid I/O sizes in KB
+        self.IO_SIZE_KB = 8 
+        self.FIXED_IOPS = 2000 
+        self.IO_SIZE_OPTIONS = [4, 8, 16, 32, 64, 128]  
 
     def _initialize_metrics_file(self, file_path):
         """Initialize a metrics file with an empty list if it doesn't exist."""
@@ -815,30 +815,21 @@ class StorageManager:
             
             delay_sec = rep_setting.get("delay_sec", 0)
 
-            # Simulate base replication throughput 
-            io_count = random.randint(50, 500)
-            replication_throughput = round(io_count / 2.0, 2)  # MB/s
-
-            # Get current timestamp
+            # io_count = random.randint(50, 500)
+            # replication_throughput = round(io_count / 2.0, 2)  # MB/s
+            io_count = 2000
+            replication_throughput=self.calculate_volume_throughput(volume)
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
             # Base time for replication between 0.01-0.05ms
             base_time_ms = round(random.uniform(0.01, 0.05), 3)
-            
-            # Check for replication fault and calculate total time
             fault = self.get_replication_fault(target_id)
             total_time_ms = base_time_ms
-            fault_sleep_ms = 0
-            
+            fault_sleep_ms = 0  
             # Only apply fault to synchronous replication
             if fault and replication_type == "synchronous":
                 fault_sleep_ms = fault.get("sleep_time", 0)
                 total_time_ms = base_time_ms + fault_sleep_ms
-                
-                # Removed direct latency update here - we'll rely on update_system_metrics 
-                # which is called in add_replication_fault and remove_replication_fault
-            
-            # Update replication metrics with the calculated time
+
             metrics = {
                 "throughput": replication_throughput,
                 "latency": total_time_ms,  # This is now our calculated time
@@ -873,6 +864,7 @@ class StorageManager:
                         "should_log": should_log,
                         "latency": total_time_ms,  # Send the calculated time to target
                         "host_id": volume.get("exported_host_id", ""),  # Include host_id from source
+                        "io_count": io_count,  # Include io_count from source
                         "source_volume": {
                              "id": volume["id"],
                              "name": volume["name"],
@@ -982,11 +974,9 @@ class StorageManager:
             with open(self.replication_metrics_file, "r") as f:
                 metrics = json.load(f)
                 
-            # Ensure it's a list
             if not isinstance(metrics, list):
                 # Handle legacy format conversion
                 if isinstance(metrics, dict):
-                    # Convert old nested format to flat timeseries
                     flat_metrics = []
                     for volume_id, targets in metrics.items():
                         for target_id, metric in targets.items():
@@ -1018,8 +1008,6 @@ class StorageManager:
         new_metric = {
             "volume_id": volume_id,
             "target_system_id": target_id,
-            # Prioritize host_id from metric_data if available (e.g., from replication_receive)
-            # Otherwise, fall back to looking it up on the current system.
             "host_id": metric_data.get("host_id") if "host_id" in metric_data else self._get_volume_host_id(volume_id),
             "timestamp": metric_data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
             "throughput": metric_data.get("throughput", 0),
@@ -1226,25 +1214,9 @@ class StorageManager:
                 "capacity_percentage": capacity_pct
             }
             
-            # Calculate new latency based on updated metrics and active faults
-            # Pass the newly calculated metrics_data to calculate_latency
             current_latency = self.calculate_latency(metrics_data) 
             metrics_data["current_latency"] = current_latency
-            
-            # Save the metrics as a new entry in the timeseries using the helper
             self._apply_retention_and_append(self.metrics_file, self.system_metrics_lock, metrics_data, MAX_RETENTION_METRICS)
-            
-            # Only log errors or significant changes instead of every update
-            # self.logger.info(
-            #    f"System metrics updated - "
-            #    f"Throughput: {total_throughput:.2f} MB/s, "
-            #    f"Volume Capacity: {volume_capacity:.2f} GB, "
-            #    f"Snapshot Capacity: {snapshot_capacity:.2f} GB, "
-            #    f"Total Capacity: {total_capacity:.2f} GB ({capacity_pct:.1f}%), "
-            #    f"Saturation: {saturation:.2f}%, "
-            #    f"Latency: {current_latency:.2f}ms",
-            #    global_log=True
-            # )
 
         except Exception as e:
             self.logger.error(f"Failed to update system metrics: {str(e)}", global_log=True)
@@ -1254,10 +1226,8 @@ class StorageManager:
         Calculate throughput for a volume based on IOPS and I/O size.
         Returns throughput in MB/s.
         """
-        FIXED_IOPS = 2000  # Fixed IOPS for all volumes
+        FIXED_IOPS = 2000
         io_size_kb = volume.get("workload_size", 4)  # Default to 4KB if not specified
-        
-        # Convert KB to MB and calculate throughput
         throughput_mb = (FIXED_IOPS * io_size_kb) / 1024
         return throughput_mb
 
