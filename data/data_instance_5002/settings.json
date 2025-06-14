@@ -1,26 +1,26 @@
 [
     {
-        "id": "19eda16c-957e-46dd-8f6b-ae150d4b525c",
-        "system_id": "2d68722e-eaf2-4014-853b-49043b37ae64",
+        "id": "7f197c8e-1f7a-49b1-acf5-384b32dcb6f9",
+        "system_id": "65f4d1ec-1c70-48f0-9a68-51a4b357b30b",
         "name": "s1",
         "type": "snapshot",
-        "value": "30 seconds",
-        "max_snapshots": 3
+        "value": "5 seconds",
+        "max_snapshots": 15
     },
     {
-        "id": "0a0fb80f-1913-4b13-a405-e20e8db78be6",
-        "system_id": "2d68722e-eaf2-4014-853b-49043b37ae64",
+        "id": "76a780cf-6e2f-4102-827d-60a7ffbb87dd",
+        "system_id": "65f4d1ec-1c70-48f0-9a68-51a4b357b30b",
         "name": "s2",
         "type": "snapshot",
         "value": "60 seconds",
         "max_snapshots": 1
     },
     {
-        "id": "d0a1a8a8-0b29-4580-905b-f79a1227c4d7",
-        "system_id": "2d68722e-eaf2-4014-853b-49043b37ae64",
+        "id": "0c329e2b-8883-44ec-ac5c-e87c1bea266b",
+        "system_id": "65f4d1ec-1c70-48f0-9a68-51a4b357b30b",
         "name": "s3",
         "type": "snapshot",
-        "value": "60 seconds",
-        "max_snapshots": 1
+        "value": "30 seconds",
+        "max_snapshots": 2
     }
 ]
