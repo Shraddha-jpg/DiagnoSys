@@ -12,4 +12,40 @@ Steps:
 10. Do not include Python expressions (e.g., (5 / 20) * 100) or additional text in the JSON; compute values explicitly.
 11. Perform proper reasoning based on the provided data and rag.txt logic; do not make assumptions.
 12. Latency < 3ms indicates 'No fault' unless other metrics suggest issues.
-Return only the JSON object.
+13. IMPORTANT: Your response must include a "tool_call" field that specifies:
+    - tool_name: "volume_contribution_calculator"
+    - parameters: {
+        "fault_analysis": fault analysis,
+        "system_data": system_data
+    }
+
+Example response format:
+{{
+    "fault_type": "No fault",
+    "details": {{
+        "latency": 1.0,
+        "saturation": 5.2,
+        "capacity_percentage": 50.0
+    }},
+    "tool_call": {{
+        "tool_name": "volume_contribution_calculator",
+        "parameters": {{
+            "fault_analysis": {{
+                "fault_type": "No fault",
+                "details": {{
+                    "latency": 1.0,
+                    "saturation": 5.2,
+                    "capacity_percentage": 50.0
+                }}
+            }},
+            "system_data": {{
+                "id": "1a99d9b5-0803-4886-a49d-693f319ff9cf",
+                "name": "5000",
+                "max_throughput": "300",
+                "max_capacity": "2500"
+            }}
+        }}
+    }}
+}}
+
+Return only the JSON object with the tool_call field included.

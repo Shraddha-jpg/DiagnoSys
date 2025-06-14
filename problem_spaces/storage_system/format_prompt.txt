@@ -13,12 +13,12 @@ RAG Logic:
 {rag_context}
 
 Example format:
-Fault Report for {system_name} (Port: {port})
+Fault Report for system {system_name} (Port: {port})
 Fault Type: <type>
 Key Details: <metrics>
-Volume Information: <details with volume size in GB, workload size in KB>
+Volume Information: <details with volume size in GB, workload size in KB, throughput in MB/s as (2000 * workload size) / 1024>
 Snapshot Information: <details>
 Volume Contributions:
 - <volume_name> (<volume_id>): capacity contribution: <percentage>% (saturation contribution: <saturation_percentage>% if applicable)
 Bully Volume: <volume and contribution for the applicable fault>
-Next Actions: <detailed actions to be taken including volume specific actions for the identified volumes and the bully volume>
+Next Actions: <detailed actions to be taken including volume specific actions for the identified volumes and the bully volume based on the fault type>

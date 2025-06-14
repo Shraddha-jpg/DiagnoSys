@@ -36,7 +36,15 @@
           "latency": "<latency value>",
           "timestamp": "<timestamp>"
         }
-      ]
+      ],
+      "tool_call": {
+        "tool_name": "volume_contribution_calculator",
+        "parameters": {
+          "fault_analysis": "fault_analysis",
+          "system_data": "system_data"
+        }
+      }
+      
     }
   }
 }
