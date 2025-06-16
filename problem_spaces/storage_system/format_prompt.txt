@@ -21,4 +21,4 @@ Snapshot Information: <details>
 Volume Contributions:
 - <volume_name> (<volume_id>): capacity contribution: <percentage>% (saturation contribution: <saturation_percentage>% if applicable)
 Bully Volume: <volume and contribution for the applicable fault>
-Next Actions: <detailed actions to be taken including volume specific actions for the identified volumes and the bully volume based on the fault type>
+Next Actions: <detailed actions to be taken including volume specific actions for the identified volumes and the bully volume based on the fault type, consider snapshot settings actions also for high capacity case>
