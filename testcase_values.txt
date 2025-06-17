@@ -17,11 +17,11 @@ System 5001:
         Host3
 
     Export Volumes:
-        Volume1,Host1, workload_size(8KB)
-        Volume2,Host2, workload_size(32KB)
-        Volume3,Host3, workload_size(128KB)
+        Volume1,Host1, workload_size(8KB), IOPS = 2000
+        Volume2,Host2, workload_size(32KB), IOPS = 2000
+        Volume3,Host3, workload_size(128KB), IOPS = 2000
 
-INPUT : why is system 5001 experiencing high latency?
+INPUT : Why is volume v3 in System 5001 experiencing high latency?
 
 CALCULATIONS FOR TESTCASE 1 :
 
@@ -30,9 +30,9 @@ Total = 125 + 200 + 150 = 475 GB
 Capacity % = (475 / 2500) × 100 = 19.0%
 
 2. Throughput per volume in MB/s (formula: (2000 * workload_size_in_KB) / 1024):
-v1 (workload size : 8KB) → 15.625 MB/s
-v2 (workload size : 32KB) → 62.5 MB/s
-v3 (workload size : 128KB) → 250 MB/s
+v1 (workload size : 8KB) → (2000 × 8) / 1024 = 15.625 MB/s
+v2 (workload size : 32KB) → (2000 × 32) / 1024 = 62.5 MB/s
+v3 (workload size : 128KB) → (2000 × 128) / 1024 = 250
 
 3. Total Saturation = 15.625 + 62.5 + 250 = 328.125 MB/s
 Saturation % = (328.125 / 400) × 100 = 82.03%
@@ -43,6 +43,9 @@ v2: 200 GB = 8.0% of total capacity, 62.5 / 400 = 15.62% saturation
 v3: 150 GB = 6.0% of total capacity, 250 / 400 = 62.5% saturation
 
 5. Bully Volume: Volume3 (128KB workload) — highest saturation % (62.5%)
+
+SNAPSHOTS :
+No snapshots are configured.
 
 EXPECTED OUTPUT : 
 
@@ -96,11 +99,11 @@ System 5002:
         Host2
 
     Export Volumes:
-        Volume1, Host1, workload_size = 32KB
-        Volume2, Host2, workload_size = 8KB
-        Volume3, Host1, workload_size = 4KB
+        Volume1, Host1, workload_size = 32KB, IOPS = 2000
+        Volume2, Host2, workload_size = 8KB, IOPS = 2000
+        Volume3, Host1, workload_size = 4KB, IOPS = 2000
 
-INPUT : Why is system 5002 experiencing high latency?
+INPUT : Why is volume v1 in System 5002 experiencing high latency?
 
 CALCULATIONS FOR TESTCASE 2:
 
@@ -116,9 +119,9 @@ v3: 100 GB × 2 = 200 GB
 Capacity % = (1700 / 2000) × 100 = 85.0%
 
 4. Throughput per volume in MB/s (formula: (2000 * workload_size_in_KB) / 1024):
-v1: workload_size - 32KB → 62.5 MB/s
-v2: workload_size - 8KB → 15.625 MB/s
-v3: workload_size - 4KB → 7.8125 MB/s
+v1: workload_size - 32KB → (2000 × 32) / 1024 = 62.5 MB/s
+v2: workload_size - 8KB → (2000 × 8) / 1024 = 15.625 MB/s
+v3: workload_size - 4KB → (2000 × 4) / 1024 = 7.8125 MB/s
 
 5. Volume Contributions (to total capacity):
 v1: (50 + 750) = 800 GB = 40.0%
@@ -150,10 +153,10 @@ Volume Contributions:
 - v3 (53344766-94c7-4eb2-8bd6-9aea61683b53): capacity contribution: 15.0%
 Bully Volume: v1 (cc3ec8b6-9ddd-4bbf-b458-e39e598cc524) with a contribution of 40.0%
 Next Actions: 
-- Reduce the capacity usage of v1 by 20% to alleviate the high capacity issue.
-- Consider migrating or archiving some of the snapshots to free up space, especially from v1 which has 15 snapshots.
-- Monitor the system's capacity and latency closely to prevent similar issues in the future.
-- Review the workload sizes and throughput of all volumes to ensure they are within the recommended limits.
+- Review snapshot settings and consider reducing the snapshot retention period to free up capacity.
+- Consider adding more storage to increase the maximum capacity.
+- For v1, optimize the workload size to reduce its capacity contribution.
+- Monitor the system's capacity and latency to ensure the actions taken are effective.
 ====================================================================================================
 
 PROBLEM 3 : HIGH LATENCY DUE TO REPLICATION LINK ISSUES (PERMANENT FAULT)
@@ -161,26 +164,26 @@ PROBLEM 3 : HIGH LATENCY DUE TO REPLICATION LINK ISSUES (PERMANENT FAULT)
 TESTCASE :
 
 System 5003 (Source System):
-    Max Throughput=350MB/s
-    Max Capacity=1500 GB
+    Max Throughput = 350MB/s
+    Max Capacity = 1500 GB
 
     Volumes:
-        Volume1=100 GB 
+        Volume1 = 100 GB 
         (With Replication settings with Synchronous, Target system 5004)
         (Fault Injection: Sleep Time=3, Fault Duration=0 seconds - permanent fault)
     Hosts:
         Host1 
 
     Export Volumes:
-        Volume1, Host1, workload_size(8KB)
+        Volume1, Host1, workload_size(8KB), IOPS = 2000
 
-INPUT : Why is system 5003 experiencing high latency?
+INPUT : Why is volume v1 in System 5003 experiencing high latency?
 
 CALCULATIONS FOR TESTCASE 3 :
 
-1. Capacity % = (100 / 1500) × 100 = 6.67%
-2. Throughput = (2000 × 8KB) / 1024 = 15.625 MB/s
-3. Saturation % = 15.625 / 350 = 4.46% 
+1. Capacity % = capacity / max_capacity × 100 = (100 / 1500) × 100 = 6.67%
+2. Throughput = (IOPS * workload_size_in_KB) / 1024 = (2000 × 8KB) / 1024 = 15.625 MB/s
+3. Saturation % = throughput / max_throughput × 100 = 15.625 / 350 = 4.46% 
 4. Fault Injection: Permanent fault → impacts local system due to latency spike
 5. Bully Volume = v1 → only volume 
 
@@ -212,14 +215,14 @@ Next Actions:
 ====================================================================================================
 
 System 5004 (Target System):
-    Max Throughput=250MB/s
-    Max Capacity=2500 GB
+    Max Throughput = 250MB/s
+    Max Capacity = 2500 GB
 
 INPUT : Why is system 5004 experiencing high latency?
 
 CALCULATIONS FOR SYSTEM 5004:
 1. Replicated Capacity = 100 GB
-2. Capacity % = 100 / 2500 × 100 = 4.0% 
+2. Capacity % = capacity / max_capacity × 100 = 100 / 2500 × 100 = 4.0% 
 3. Throughput = 0 MB/s → Saturation = 0% 
 4. Replication Fault Latency Not Propagated → So Latency = 1.0 ms 
 5. No bully volume as Latency is 1.0 ms 
