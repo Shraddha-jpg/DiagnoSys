@@ -159,7 +159,7 @@ Next Actions:
 - Monitor the system's capacity and latency to ensure the actions taken are effective.
 ====================================================================================================
 
-PROBLEM 3 : HIGH LATENCY DUE TO REPLICATION LINK ISSUES (PERMANENT FAULT)
+PROBLEM 3 : HIGH LATENCY DUE TO REPLICATION LINK ISSUES
 
 TESTCASE :
 
