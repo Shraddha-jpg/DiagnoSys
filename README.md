@@ -14,7 +14,7 @@ This AI agent helps users diagnose and troubleshoot latency issues in storage sy
 
 The agent can diagnose three main types of latency faults:
 
-1. **High Capacity Issues**: Detects when storage capacity usage is causing latency
+1. **High Capacity Issues**: Detects when storage capacity usage is causing high latency
 2. **High Saturation Issues**: Identifies when system is overloaded with I/O
 3. **Replication Link Issues**: Diagnoses problems with replication connections
 
