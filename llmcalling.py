@@ -15,13 +15,16 @@ from pydantic import BaseModel
 from typing import TypedDict
 import streamlit as st
 
+class SystemNotFoundError(Exception):
+    pass
+
 # === Load Configuration ===
 CONFIG_PATH = "config.json"
 if not os.path.exists(CONFIG_PATH):
     raise FileNotFoundError(f"Configuration file not found at {CONFIG_PATH}")
 with open(CONFIG_PATH, 'r') as f:
     config = json.load(f)
-PROBLEM_SPACE = config.get("problem_space", "storage_system")
+PROBLEM_SPACE = config.get("problem_space", "")
 PROBLEM_SPACE_DIR = f"problem_spaces/{PROBLEM_SPACE}"
 DATA_MODEL_PATH = f"{PROBLEM_SPACE_DIR}/data_model.json"
 TOOLS_CONFIG_PATH = f"{PROBLEM_SPACE_DIR}/tools.json"
@@ -149,15 +152,13 @@ def extract_relevant_data(state: AgentState) -> AgentState:
     state["system_metrics"] = {}
     state["context"] = ""
     state["rag_context"] = ""
-    state["skip_analysis"] = False
+    
 
     # Check for system data directory
+   
     data_dir = f"data_instance_{port}"
     if not os.path.exists(data_dir):
-        print(f"Error: Data directory {data_dir} not found")
-        state["fault_analysis"] = {"error": "System not found", "port": port}
-        state["skip_analysis"] = True
-        return state
+        raise SystemNotFoundError(f"System not found for port {port}")
 
     # Load system data
     context_parts = []
@@ -604,6 +605,12 @@ def main():
                     st.session_state.messages.append({"role": "assistant", "content": output})
                     with st.chat_message("assistant"):
                         st.markdown(output, unsafe_allow_html=False)
+
+        except SystemNotFoundError as e:
+            error_message = "System not found"
+            st.session_state.messages.append({"role": "assistant", "content": error_message})
+            with st.chat_message("assistant"):
+                st.markdown(error_message)
                         
         except Exception as e:
             import traceback
