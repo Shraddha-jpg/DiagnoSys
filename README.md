@@ -4,7 +4,6 @@ This AI agent helps users diagnose and troubleshoot latency issues in storage sy
 
 ## Features
 
-- Time-aware analysis: Understands temporal references in user queries (e.g., "yesterday at 1am")
 - Tool-based diagnosis: Uses Groq LLM to call tools for fetching relevant data
 - RAG integration: Incorporates support documentation into analysis
 - Visualization: Displays key metrics in interactive charts
