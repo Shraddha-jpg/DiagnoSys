@@ -170,7 +170,7 @@ System 5003 (Source System):
     Volumes:
         Volume1 = 100 GB 
         (With Replication settings with Synchronous, Target system 5004)
-        (Fault Injection: Sleep Time=3, Fault Duration=0 seconds - permanent fault)
+        (Fault Injection: Sleep Time=3, Fault Duration=600 seconds)
     Hosts:
         Host1 
 
