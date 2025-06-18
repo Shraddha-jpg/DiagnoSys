@@ -768,18 +768,18 @@
             <!-- Export Volume -->
             <div class="card" id="export-volume-card">
                 <h2><i class="fas fa-share-alt section-icon"></i> Export Volume</h2>
-                <div class="form-control" id="export-no-system-message" style="display: none;">
+                <div class="form-control" id="export-volume-no-system-message">
                     <p class="warning-message">Please create a system first to export volumes.</p>
                 </div>
-                <div class="form-control" id="export-volume-form-fields">
+                <div class="form-control initially-hidden" id="export-volume-fields">
                     <label for="export_volume_id">Select Volume</label>
                     <select id="export_volume_id"></select>
                 </div>
-                <div class="form-control" id="export-host-form-fields">
+                <div class="form-control initially-hidden" id="export-host-fields">
                     <label for="export_host_id">Select Host</label>
                     <select id="export_host_id"></select>
                 </div>
-                <div class="form-control" id="export-workload-form-fields">
+                <div class="form-control initially-hidden" id="export-workload-fields">
                     <label for="workload_size">Workload Size</label>
                     <select id="workload_size" name="workload_size">
                         <option value="4">4 KB</option>
@@ -790,7 +790,7 @@
                         <option value="128">128 KB</option>
                     </select>
                 </div>
-                <div class="crud-buttons" id="export-volume-buttons">
+                <div class="crud-buttons initially-hidden" id="export-volume-buttons">
                     <button class="btn btn-success" onclick="exportVolume()">
                         <i class="fas fa-share-square"></i> Export Volume
                     </button>
@@ -800,16 +800,16 @@
             <!-- Unexport Volume -->
             <div class="card" id="unexport-volume-card">
                 <h2><i class="fas fa-unlink section-icon"></i> Unexport Volume</h2>
-                <div class="form-control" id="unexport-no-system-message" style="display: none;">
+                <div class="form-control" id="unexport-volume-no-system-message">
                     <p class="warning-message">Please create a system first to unexport volumes.</p>
                 </div>
-                <div class="form-control" id="unexport-volume-form-fields">
+                <div class="form-control initially-hidden" id="unexport-volume-fields">
                     <label for="volume-select">Select Volume</label>
                     <select id="volume-select">
                         <option value="">-- Select Exported Volume --</option>
                     </select>
                 </div>
-                <div class="crud-buttons" id="unexport-volume-buttons">
+                <div class="crud-buttons initially-hidden" id="unexport-volume-buttons">
                     <button class="btn btn-danger" onclick="unexportVolume()">
                         <i class="fas fa-unlink"></i> Unexport
                     </button>
@@ -898,10 +898,10 @@
             <!-- Response -->
             <div class="card" id="response-card">
                 <h2><i class="fas fa-reply section-icon"></i> Response</h2>
-                <div class="form-control" id="response-no-system-message" style="display: none;">
+                <div id="response-no-system-message" class="form-control">
                     <p class="warning-message">Please create a system first to view responses.</p>
                 </div>
-                <pre id="response"></pre>
+                <pre id="response" class="initially-hidden"></pre>
             </div>
 
             <!-- Top Latency Card -->
@@ -912,8 +912,8 @@
                         <thead>
                             <tr>
                                 <th>Rank</th>
-                                <th>Volume ID</th>
-                                <th>Host ID</th>
+                                <th>Volume Name</th>
+                                <th>Host Name</th>
                                 <th>Avg Latency (ms)</th>
                             </tr>
                         </thead>
@@ -1029,6 +1029,7 @@
             return data;
         }
 
+    
         async function updateCharts() {
             const latencyData = await fetchLatencyData();
             const exportedVolumesDiv = document.getElementById('exportedVolumesCharts');
@@ -1041,7 +1042,6 @@
                 return;
             }
 
-
             Object.keys(latencyData).forEach(volumeId => {
                 const volumeData = latencyData[volumeId];
                 if (!volumeData.timestamps || !volumeData.values) return; // Skip if missing data
@@ -1049,11 +1049,10 @@
                 const chartContainer = document.createElement('div');
                 chartContainer.className = 'chart-container';
                 chartContainer.innerHTML = `
-                         <h3>Volume ID: ${volumeId}</h3>
-                         <canvas id="chart-${volumeId}"></canvas>
-                     `;
+                    <h3>Volume : ${volumeData.name || volumeId}</h3>
+                    <canvas id="chart-${volumeId}"></canvas>
+                `;
                 exportedVolumesDiv.appendChild(chartContainer);
-
 
                 const ctx = document.getElementById(`chart-${volumeId}`).getContext('2d');
                 new Chart(ctx, {
@@ -1061,7 +1060,7 @@
                     data: {
                         labels: volumeData.timestamps,
                         datasets: [{
-                            label: 'Latency (ms)',
+                            label: `Latency (ms) - ${volumeData.name || volumeId}`,
                             data: volumeData.values,
                             borderColor: 'red',
                             fill: false,
@@ -1072,35 +1071,23 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         scales: {
-
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Time'
-
-                                },
-                                ticks: {
-                                    maxTicksLimit: 10
-                                }
+                                title: { display: true, text: 'Time' },
+                                ticks: { maxTicksLimit: 10 }
                             },
                             y: {
-                                title: {
-                                    display: true,
-                                    text: 'Latency (ms)'
-
-                                },
+                                title: { display: true, text: 'Latency (ms)' },
                                 beginAtZero: true
                             }
                         },
                         plugins: {
-                            legend: {
-                                position: 'top'
-                            }
+                            legend: { position: 'top' }
                         }
                     }
                 });
             });
         }
+
 
         // Initial chart load and periodic update
         updateCharts();
@@ -1109,6 +1096,7 @@
 
 
 
+        <!-- ... existing code ... -->
     <script>
         async function fetchTopLatency() {
             try {
@@ -1121,10 +1109,10 @@
 
                 if (!data.top_volumes || data.top_volumes.length === 0) {
                     topLatencyTable.innerHTML = `
-                     <tr>
-                         <td colspan="4">No latency data available for volumes in this system instance</td>
-                     </tr>
-                 `;
+                        <tr>
+                            <td colspan="4">No latency data available for volumes in this system instance</td>
+                        </tr>
+                    `;
                     return;
                 }
 
@@ -1132,8 +1120,8 @@
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${index + 1}</td>
-                        <td><a href="#" onclick="fetchLatencyHistory('${volume.volume_id}')">${volume.volume_id}</a></td>
-                        <td>${volume.host_id || 'N/A'}</td>
+                        <td><a href="#" onclick="fetchLatencyHistory('${volume.volume_id}')">${volume.volume_name}</a></td>
+                        <td>${volume.host_name || 'N/A'}</td>
                         <td class="latency-value">${parseFloat(volume.avg_latency).toFixed(2)}</td>
                     `;
                     topLatencyTable.appendChild(row);
@@ -1143,15 +1131,16 @@
                 console.error("Error fetching top latency data:", error);
                 const topLatencyTable = document.getElementById('topLatencyTable');
                 topLatencyTable.innerHTML = `
-                 <tr>
-                     <td colspan="4">Error loading data</td>
-                 </tr>
-             `;
+                    <tr>
+                        <td colspan="4">Error loading data</td>
+                    </tr>
+                `;
             }
         }
         fetchTopLatency();
         setInterval(fetchTopLatency, 10000); // Update every 10 seconds
     </script>
+
 
     <!-- Load Chart.js first -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1175,7 +1164,7 @@
                 const latencies = data.latency_data.map(entry => entry.latency);
 
                 // Render the graph in the modal
-                renderLatencyGraph(volumeId, timestamps, latencies);
+                renderLatencyGraph(volumeId, data.volume_name || volumeId, data.host_name || 'N/A', timestamps, latencies);
 
                 // Show the modal and backdrop
                 document.getElementById('latency-history-backdrop').style.display = 'block';
@@ -1190,7 +1179,7 @@
             }
         }
 
-        function renderLatencyGraph(volumeId, timestamps, latencies) {
+        function renderLatencyGraph(volumeId, volumeName, hostName, timestamps, latencies) {
             const ctx = document.getElementById('modal-latency-chart').getContext('2d');
 
             // Destroy the previous chart instance before creating a new one
@@ -1199,7 +1188,7 @@
             }
 
             // Update graph title
-            document.getElementById('modal-graph-title').innerText = `Latency for ${volumeId} (Last Hour)`;
+            document.getElementById('modal-graph-title').innerText = `Latency for ${volumeName} (Host: ${hostName}) - Last Hour`;
 
             // Create a new line chart
             latencyChart = new Chart(ctx, {
@@ -1207,7 +1196,7 @@
                 data: {
                     labels: timestamps,
                     datasets: [{
-                        label: `Latency for ${volumeId}`,
+                        label: `Latency for ${volumeName} (Host: ${hostName})`,
                         data: latencies,
                         borderColor: 'blue',
                         borderWidth: 2,
@@ -1440,14 +1429,17 @@
                         document.getElementById('volume-no-system-message').style.display = 'none';
                         document.getElementById('host-no-system-message').style.display = 'none';
                         document.getElementById('settings-no-system-message').style.display = 'none';
+                        document.getElementById('export-volume-no-system-message').style.display = 'none';
+                        document.getElementById('unexport-volume-no-system-message').style.display = 'none';
+                        document.getElementById('response-no-system-message').style.display = 'none';
                     }
 
-                    // Update form visibility for all sections
+                    // Update form visibility
                     checkVolumeFormVisibility();
                     checkHostFormVisibility();
                     checkSettingsFormVisibility();
-                    checkExportFormVisibility();
-                    checkUnexportFormVisibility();
+                    checkExportVolumeFormVisibility();
+                    checkUnexportVolumeFormVisibility();
                     checkResponseVisibility();
 
                     document.getElementById('update-system-btn').style.display = 'inline';
@@ -1484,6 +1476,9 @@
                 document.getElementById('volume-no-system-message').style.display = 'block';
                 document.getElementById('host-no-system-message').style.display = 'block';
                 document.getElementById('settings-no-system-message').style.display = 'block';
+                document.getElementById('export-volume-no-system-message').style.display = 'block';
+                document.getElementById('unexport-volume-no-system-message').style.display = 'block';
+                document.getElementById('response-no-system-message').style.display = 'block';
 
                 // Hide all forms
                 document.getElementById('volume-name-container').style.display = 'none';
@@ -1501,11 +1496,18 @@
                 document.getElementById('setting-details-container').style.display = 'none';
                 document.getElementById('settings-id-container').style.display = 'none';
 
+                document.getElementById('export-volume-fields').style.display = 'none';
+                document.getElementById('export-host-fields').style.display = 'none';
+                document.getElementById('export-workload-fields').style.display = 'none';
+                document.getElementById('export-volume-buttons').style.display = 'none';
+
+                document.getElementById('unexport-volume-fields').style.display = 'none';
+                document.getElementById('unexport-volume-buttons').style.display = 'none';
+
+                document.getElementById('response').classList.add('initially-hidden');
+
                 document.getElementById('update-system-btn').style.display = 'none';
                 document.getElementById('delete-system-btn').style.display = 'none';
-                checkExportFormVisibility();
-                checkUnexportFormVisibility();
-                checkResponseVisibility();
             });
         }
 
@@ -2068,10 +2070,18 @@
                     checkVolumeFormVisibility();
                     checkHostFormVisibility();
                     checkSettingsFormVisibility();
+                    checkExportVolumeFormVisibility();
+                    checkUnexportVolumeFormVisibility();
+                    checkResponseVisibility();
 
                     // Update other dropdowns
                     updateDropdown('volume', 'export_volume_id', 'id', 'name');
                     updateDropdown('host', 'export_host_id', 'id', 'name');
+                } else {
+                    // Show warnings if no system exists
+                    document.getElementById('export-volume-no-system-message').style.display = 'block';
+                    document.getElementById('unexport-volume-no-system-message').style.display = 'block';
+                    document.getElementById('response-no-system-message').style.display = 'block';
                 }
             });
 
@@ -2125,11 +2135,6 @@
                     }
                 }
             }, 15000); // Refresh every 15 seconds instead of 5
-
-            // Always check export/unexport/response visibility
-            checkExportFormVisibility();
-            checkUnexportFormVisibility();
-            checkResponseVisibility();
         };
 
         function handleVolumeSelection() {
@@ -2349,21 +2354,21 @@
             }
         }, 5000);
 
-        function checkExportFormVisibility() {
+        function checkExportVolumeFormVisibility() {
             fetch('/data/system').then(res => res.json()).then(systems => {
                 const visible = systems && systems.length > 0;
-                document.getElementById('export-no-system-message').style.display = visible ? 'none' : 'block';
-                document.getElementById('export-volume-form-fields').style.display = visible ? 'block' : 'none';
-                document.getElementById('export-host-form-fields').style.display = visible ? 'block' : 'none';
-                document.getElementById('export-workload-form-fields').style.display = visible ? 'block' : 'none';
+                document.getElementById('export-volume-no-system-message').style.display = visible ? 'none' : 'block';
+                document.getElementById('export-volume-fields').style.display = visible ? 'block' : 'none';
+                document.getElementById('export-host-fields').style.display = visible ? 'block' : 'none';
+                document.getElementById('export-workload-fields').style.display = visible ? 'block' : 'none';
                 document.getElementById('export-volume-buttons').style.display = visible ? 'flex' : 'none';
             });
         }
-        function checkUnexportFormVisibility() {
+        function checkUnexportVolumeFormVisibility() {
             fetch('/data/system').then(res => res.json()).then(systems => {
                 const visible = systems && systems.length > 0;
-                document.getElementById('unexport-no-system-message').style.display = visible ? 'none' : 'block';
-                document.getElementById('unexport-volume-form-fields').style.display = visible ? 'block' : 'none';
+                document.getElementById('unexport-volume-no-system-message').style.display = visible ? 'none' : 'block';
+                document.getElementById('unexport-volume-fields').style.display = visible ? 'block' : 'none';
                 document.getElementById('unexport-volume-buttons').style.display = visible ? 'flex' : 'none';
             });
         }
@@ -2371,7 +2376,7 @@
             fetch('/data/system').then(res => res.json()).then(systems => {
                 const visible = systems && systems.length > 0;
                 document.getElementById('response-no-system-message').style.display = visible ? 'none' : 'block';
-                document.getElementById('response').style.display = visible ? 'block' : 'none';
+                document.getElementById('response').classList.toggle('initially-hidden', !visible);
             });
         }
     </script>

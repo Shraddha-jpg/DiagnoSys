@@ -29,14 +29,11 @@ def find_available_port(start=5000, max_instances=50):
 
 def find_port():
     return int(os.getenv("FLASK_PORT", find_available_port()))
-PORT = find_port()
-
-print(f"Using port: {PORT}")
+PORT = find_port() 
 
 # Unique data directory for this instance
 DATA_DIR = f"data_instance_{PORT}"
 os.makedirs(DATA_DIR, exist_ok=True)
-print(f"DATA_DIR: {DATA_DIR}")
 
 # Initialize logger
 logger = Logger(port=PORT, data_dir=DATA_DIR)
@@ -274,6 +271,11 @@ def update_volume(volume_id):
             print(f"❌ ERROR: Volume {volume_id} not found.")
             return jsonify({"error": "Volume not found."}), 404
 
+        # ✅ Unexport if volume is currently exported
+        if volume.get("is_exported"):
+            print(f"🚨 Unexporting volume {volume_id} before updating settings.")
+            storage_mgr.unexport_volume(volume_id, reason="Volume update")
+
         # ✅ Get incoming data
         data = request.get_json(silent=True) or {}
         print(f"📥 Incoming data: {data}")  # Debug log
@@ -335,10 +337,9 @@ def update_volume(volume_id):
             volume["snapshot_frequencies"] = snapshot_frequencies  # ✅ Store converted values
             storage_mgr.update_resource("volume", volume_id, volume)
 
-            # If volume is currently exported, restart snapshots
-            if volume.get("is_exported"):
-                print(f"🚀 Restarting snapshot for exported volume {volume_id} with frequencies {snapshot_frequencies}")
-                storage_mgr.start_snapshot(volume_id, snapshot_frequencies)
+            # ✅ Restart snapshot with converted frequencies
+            print(f"🚀 Restarting snapshot for volume {volume_id} with frequencies {snapshot_frequencies}")
+            storage_mgr.start_snapshot(volume_id, snapshot_frequencies)
 
             return jsonify({"message": "Settings updated successfully", "volume": volume}), 200
 
@@ -715,8 +716,7 @@ def export_volume():
         print(f"❌ ERROR: {traceback.format_exc()}")  # Print full error traceback
         return jsonify({"error": str(e)}), 500
 
-# data_dir = f"data_instance_{PORT}"
-data_dir=DATA_DIR
+data_dir = f"data_instance_{PORT}"
 volume_file = os.path.join(DATA_DIR, "volume.json")
 
 # Ensure data directory exists
@@ -1118,6 +1118,9 @@ def get_latency():
         # Filter to only include volumes from the current system
         current_system_volumes = [v for v in volumes if v.get("system_id") == current_system_id]
         
+        # Create a dictionary of volume info including names
+        volume_info = {v["id"]: {"name": v.get("name", v["id"])} for v in current_system_volumes}
+        
         # Create a set of exported volume IDs from the current system
         exported_volumes = {v["id"] for v in current_system_volumes if v.get("is_exported", False)}
         
@@ -1141,7 +1144,11 @@ def get_latency():
                 
                 if timestamp >= fifteen_minutes_ago and volume_id in exported_volumes:
                     if volume_id not in volume_latency_data:
-                        volume_latency_data[volume_id] = {"timestamps": [], "values": []}
+                        volume_latency_data[volume_id] = {
+                            "timestamps": [],
+                            "values": [],
+                            "name": volume_info[volume_id]["name"]  # Include volume name
+                        }
                     volume_latency_data[volume_id]["timestamps"].append(timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"))
                     volume_latency_data[volume_id]["values"].append(float(latency))
         
@@ -1150,16 +1157,12 @@ def get_latency():
         return jsonify({"error": str(e)}), 500
     
 
-# LOG_FILE = os.path.join(data_dir, f"logs_{PORT}.txt")
+LOG_FILE = os.path.join(data_dir, f"logs_{PORT}.txt")
 
-LOG_FILE = os.path.join(DATA_DIR, f"logs_{PORT}.txt")
-
-
-
+# ... existing code ...
 @app.route('/api/top-latency', methods=['GET'])
 def get_top_latency():
     try:
-        print(f"LOG_FILE: {LOG_FILE}")
         if not os.path.exists(LOG_FILE):
             return jsonify({"error": "Log file not found"}), 404
         
@@ -1177,6 +1180,10 @@ def get_top_latency():
         
         # Load volume data to get system-specific volumes
         volume_data = storage_mgr.load_resource("volume")
+        
+        # Load host data to get host names
+        host_data = storage_mgr.load_resource("host")
+        host_info = {h["id"]: h["name"] for h in host_data}
         
         # Filter to only volumes from this system
         current_system_volumes = {
@@ -1221,18 +1228,22 @@ def get_top_latency():
             # We already filtered by system ID, so we can safely access the volume
             vol_info = current_system_volumes.get(vol_id, {})
             host_id = vol_info.get("exported_host_id", "N/A")
+            volume_name = vol_info.get("name", vol_id)  # Use volume name if available, fallback to ID
+            host_name = host_info.get(host_id, "N/A")  # Get host name, fallback to N/A
             
             result.append({
                 "volume_id": vol_id,
+                "volume_name": volume_name,
                 "avg_latency": round(latency, 2),
-                "host_id": host_id
+                "host_id": host_id,
+                "host_name": host_name  # Include host name in response
             })
 
         return jsonify({"top_volumes": result})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/api/latency-history/<volume_id>', methods=['GET'])
 def get_latency_history(volume_id):
     try:
@@ -1258,6 +1269,12 @@ def get_latency_history(volume_id):
         if not volume:
             return jsonify({"error": "Volume not found in this system"}), 404
 
+        # Get host information
+        hosts = storage_mgr.load_resource("host")
+        host_info = {h["id"]: h["name"] for h in hosts}
+        host_id = volume.get("exported_host_id", "")
+        host_name = host_info.get(host_id, "N/A")
+
         now = datetime.utcnow()
         one_hour_ago = now - timedelta(hours=1)
         latency_data = []
@@ -1275,7 +1292,13 @@ def get_latency_history(volume_id):
                 if vol_id == volume_id and timestamp >= one_hour_ago:
                     latency_data.append({"timestamp": timestamp_str, "latency": float(latency)})
 
-        return jsonify({"volume_id": volume_id, "latency_data": latency_data})
+        return jsonify({
+            "volume_id": volume_id,
+            "volume_name": volume.get("name", volume_id),
+            "host_id": host_id,
+            "host_name": host_name,
+            "latency_data": latency_data
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
