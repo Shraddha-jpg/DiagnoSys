@@ -113,8 +113,6 @@ The AI agent reads from these key data sources:
 Streamlit-powered interactive dashboards visualize:
 
 - Line and bar charts for capacity, latency, IOPS, and throughput over time.
-- Heatmaps highlighting storage saturation hotspots.
-- Replication lag and link health trend graphs.
 
 ## Development & Extensibility
 
@@ -129,25 +127,6 @@ Streamlit-powered interactive dashboards visualize:
 3. **Enhance Visualizations**  
    Update the Streamlit app (`ai_agent.py`) to visualize new metrics or analysis results.
 
-## Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork this repository.
-2. Create a new feature branch:
-
-   ```bash
-   git checkout -b feature/my-new-feature
-   ```
-
-3. Commit your changes.
-4. Push to your branch:
-
-   ```bash
-   git push origin feature/my-new-feature
-   ```
-
-5. Open a Pull Request.
 
 ## License
 
