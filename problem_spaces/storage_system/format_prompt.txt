@@ -8,7 +8,7 @@ Use the volume_contributions field from the JSON for consistent reporting.
 For replication issues, highlight the primary affected volume with 100% contribution. 
 For saturation faults, include saturation_contribution from volume_contributions. 
 If volume_contributions is empty or missing, indicate that contribution data is unavailable and suggest checking system configuration. 
-If fault_type is 'No fault', skip the bully volume section.
+If fault_type is 'No fault or High latency due to high capacity or High latency due to replication link issues', skip the bully volume section.
 RAG Logic:
 {rag_context}
 
@@ -16,9 +16,11 @@ Example format:
 Fault Report for system {system_name} (Port: {port})
 Fault Type: <type>
 Key Details: <metrics>
-Volume Information: <details with volume size in GB, workload size in KB, throughput in MB/s as (2000 * workload size) / 1024>
+Volume Information: <details with volume size in GB, workload size in KB>
 Snapshot Information: <details>
 Volume Contributions:
 - <volume_name> (<volume_id>): capacity contribution: <percentage>% (saturation contribution: <saturation_percentage>% if applicable)
-Bully Volume: <volume and contribution for the applicable fault>
-Next Actions: <detailed actions to be taken including volume specific actions for the identified volumes and the bully volume based on the fault type, consider snapshot settings actions also for high capacity case>
+Bully Volume: <volume and contribution only for the saturation fault>
+Highest contributor: <The volume with the highest contribution to the fault>
+Next Actions: <detailed actions to be taken including volume specific actions for the identified volumes and the bully volume and Highest contributor based on the fault type, consider bully volume snapshot "settings" actions also for 
+ capacity case and replication settings for replication case and capacity settings for capacity case>
