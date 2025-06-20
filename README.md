@@ -1,4 +1,4 @@
-# 📊 Storage System AI Diagnostic Agent
+# Storage System AI Diagnostic Agent
 
 An AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
 
