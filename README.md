@@ -1,84 +1,174 @@
-# Storage System AI Diagnostic Agent
+# 📊 Storage System AI Diagnostic Agent
 
-This AI agent helps users diagnose and troubleshoot latency issues in storage systems by analyzing metrics, logs, and configurations.
+An AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
 
 ## Features
 
-- Tool-based diagnosis: Uses Groq LLM to call tools for fetching relevant data
-- RAG integration: Incorporates support documentation into analysis
-- Visualization: Displays key metrics in interactive charts
-- Conversation history: Maintains context throughout the diagnostic session
+- **LLM-Powered Diagnosis**: Uses the Groq LLM API to intelligently process user queries and orchestrate tool invocations for gathering relevant diagnostic data.
+- **Tool-Based Analysis**: Leverages specialized tool wrappers to fetch and process system metrics, logs, and configuration details relevant to the suspected issue.
+- **RAG Integration**: Integrates support documentation (PDF/text) to supplement AI-generated recommendations with reference content from manuals, KB articles, and internal documentation.
+- **Interactive Visualizations**: Displays key diagnostic metrics via interactive charts and dashboards for clear, real-time insights.
+- **Conversational Context Tracking**: Maintains context of the diagnostic session across multiple user queries to support deep-dive, follow-up, and comparative analysis.
 
 ## Supported Latency Issue Types
 
-The agent can diagnose three main types of latency faults:
+The AI agent currently supports diagnosis of three primary latency fault categories in storage systems:
 
-1. **High Capacity Issues**: Detects when storage capacity usage is causing high latency
-2. **High Saturation Issues**: Identifies when system is overloaded with I/O
-3. **Replication Link Issues**: Diagnoses problems with replication connections
+1. **High Capacity Usage Issues**
+   - Detects when elevated storage capacity consumption leads to degraded I/O latency.
+   - Monitors capacity thresholds, volume sizes, and historical usage patterns.
+
+2. **High Throughput Saturation Issues**
+   - Identifies scenarios where storage arrays or servers become saturated with I/O requests, causing queueing delays.
+   - Analyzes IOPS, bandwidth utilization, queue depths, and average response times.
+
+3. **Replication Link Issues**
+   - Diagnoses problems in replication networks that might cause delayed writes, asynchronous lag, or inconsistent states.
+   - Tracks replication link health, transfer rates, and lag metrics.
 
 ## Setup Instructions
 
 ### Prerequisites
 
 - Python 3.8+
-- Groq API key (for LLM access)
+- Groq API Key 
+- Streamlit (for interactive web UI)
 
 ### Installation
 
 1. Clone this repository:
-   ```
+
+   ```bash
    git clone <repository-url>
    cd storage-ai-agent
    ```
 
-2. Install required dependencies:
-   ```
+2. Install Python dependencies:
+
+   ```bash
    pip install -r requirements.txt
    ```
 
-3. Set up environment variables (create a `.env` file):
-   ```
+3. Set environment variables:
+
+   Create a `.env` file in the project root directory and add:
+
+   ```env
    GROQ_API_KEY=your_groq_api_key_here
    ```
 
-4. Ensure support documentation is available:
-   - Place your documentation as `support_documentation.pdf` or `support_documentation.txt` in the project root
+4. Provide support documentation:
 
-### Running the Agent
+   Place your storage system's technical documentation or operational guides in the project root directory as either:
 
-Start the Streamlit app:
-```
+   - `support_documentation.pdf`
+   - `support_documentation.txt`
+
+## Running the Agent
+
+To start the Streamlit web application, run:
+
+```bash
 streamlit run ai_agent.py
 ```
 
-The web interface will be available at http://localhost:8501
+Once the app launches, open your browser and navigate to:
+
+[http://localhost:8501](http://localhost:8501)
 
 ## Usage Instructions
 
-1. Select a storage system from the dropdown menu in the sidebar
-2. Type your query in the text area (e.g., "Why was my latency high yesterday at 1am?")
-3. Click "Analyze" to initiate the diagnostic process
-4. Review the AI's analysis and recommendations
-5. Ask follow-up questions to get more specific information
+1. **Select a Storage System**  
+   Use the storage subsystem UI to create systems and export/unexport volumes.
+
+2. **Enter a Query**  
+   In the text input area, type a natural language query about system performance or a specific latency event.  
+   _Example:_  
+   `"Why was my latency unusually high in system 5003?`
+
+3. **Review the AI’s Analysis**  
+   The agent will:
+   - Fetch relevant metrics and logs.
+   - Perform AI-based analysis.
+   - Summarize possible causes, issue classifications, and offer documentation snippets for reference.
+
+5. **Ask Follow-up Questions**  
+   Continue the session by typing new, related queries to dive deeper into metrics or request targeted suggestions.  
+   _Example:_  
+   `"Show replication lag trend over the past 24 hours"`
 
 ## Metrics Files Reference
 
-The agent analyzes these key data sources:
+The AI agent reads from these key data sources:
 
-- **system_metrics.json**: System-wide metrics (capacity, throughput, saturation)
-- **io_metrics.json**: I/O performance data by volume and host
-- **replication_metrics.json**: Replication performance and status
-- **Log files**: System events and status messages
+| File Name                  | Description                                              |
+|:--------------------------|:---------------------------------------------------------|
+| `system_metrics.json`      | System-wide metrics like capacity, throughput, and saturation |
+| `io_metrics.json`          | Detailed I/O performance metrics by storage volume and host |
+| `replication_metrics.json` | Replication-specific metrics including link health, lag, and transfer rates |
+| Log Files (`logs/*.log`)   | System events, error logs, warnings, and informational messages |
 
-## Development
+## Visualizations
 
-To extend the agent with new diagnostic capabilities:
+Streamlit-powered interactive dashboards visualize:
 
-1. Add new tool definitions to `ai_tools.py`
-2. Update the support documentation with relevant information
-3. Enhance visualization in `ai_agent.py` as needed
+- Line and bar charts for capacity, latency, IOPS, and throughput over time.
+- Heatmaps highlighting storage saturation hotspots.
+- Replication lag and link health trend graphs.
+
+## Development & Extensibility
+
+**To extend diagnostic capabilities:**
+
+1. **Add New Tool Functions**  
+   Create additional data retrieval and analysis functions in `ai_tools.py`.
+
+2. **Update Documentation Corpus**  
+   Add new PDFs or text files containing operational manuals, KB articles, or troubleshooting guides into the project root.
+
+3. **Enhance Visualizations**  
+   Update the Streamlit app (`ai_agent.py`) to visualize new metrics or analysis results.
+
+## Contributing
+
+Contributions are welcome! To contribute:
+
+1. Fork this repository.
+2. Create a new feature branch:
+
+   ```bash
+   git checkout -b feature/my-new-feature
+   ```
+
+3. Commit your changes.
+4. Push to your branch:
+
+   ```bash
+   git push origin feature/my-new-feature
+   ```
+
+5. Open a Pull Request.
 
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+
+## Example `.env` File
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+## Example `requirements.txt`
+
+```
+streamlit
+python-dotenv
+groq-sdk
+pandas
+matplotlib
+seaborn
+numpy
+pdfplumber
+```
