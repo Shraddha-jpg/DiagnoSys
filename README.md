@@ -69,7 +69,7 @@ The AI agent currently supports diagnosis of three primary latency fault categor
 To start the Streamlit web application, run:
 
 ```bash
-streamlit run ai_agent.py
+streamlit run llm.py
 ```
 
 Once the app launches, open your browser and navigate to:
@@ -125,7 +125,7 @@ Streamlit-powered interactive dashboards visualize:
    Add new PDFs or text files containing operational manuals, KB articles, or troubleshooting guides into the project root.
 
 3. **Enhance Visualizations**  
-   Update the Streamlit app (`ai_agent.py`) to visualize new metrics or analysis results.
+   Update the Streamlit app (`llm.py`) to visualize new metrics or analysis results.
 
 
 ## License
