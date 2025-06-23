@@ -7,7 +7,7 @@ With a sleek user interface, users can easily create new systems, view all confi
 
 ![Storage System Simulator UI](images/system.png)
 
-On successfully creating a system, the following response will be displayed with port number assigned to the system along with a unique ID
+On successfully creating a system, the following response will be displayed with port number assigned to the system along with a unique ID using the following python function: **str(uuid.uuid4())**, which ensures that no two UUID's collide across systems.
 
 ![System creation response](images/response.png)
 
