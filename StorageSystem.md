@@ -99,7 +99,7 @@ A configurable **Delay (in seconds)** is available for asynchronous setups to si
 With options to **Create**, **View**, **Update**, or **Delete** settings, this feature empowers users to model robust data replication strategies and test their effectiveness within the simulator.
 
 
-### ⏱️ Latency Monitoring Dashboard
+### Latency Monitoring Dashboard
 
 The **Latency Monitoring Dashboard** provides real-time insight into system performance by tracking and visualizing I/O latency across volumes. The **Top 5 Volumes by Latency (Last 15 Min)** table ranks exported volumes based on their average response time, helping users quickly identify performance bottlenecks. Each entry includes the **Volume Name**, associated **Host**, and **Average Latency (in ms)** over the past 15 minutes.
 
