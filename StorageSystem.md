@@ -35,6 +35,11 @@ Shown below is the response for successful creation of a volume, along with sett
 
 Similar to systems, volumes are also associated with a UUID, generated using the same python function **str(uuid.uuid4())**, and also have CRUD fucntionalities, as shown in the UI. Specifics of the Settings object and its types will be detailed further below.
 
+You can choose to apply settings to each individual volume, as shown below on successful application: 
+
+![Storage System Simulator UI for Volume](images/volumesettingresponse.png)
+
+
 ### Host Object
 
 The **Host** object in the Storage System Simulator represents a computing entity that connects to storage resources. Each host is defined by a unique **Host Name**, an **Application Type** (e.g., HPE, VMware, Oracle,SQL), and a **Protocol** (e.g., FC - Fibre Channel, iSCSI,NVMe). This setup allows users to simulate real-world host configurations and their interaction with storage volumes. 
