@@ -654,20 +654,14 @@ def update_settings(settings_id):
 
 @app.route('/settings/<settings_id>', methods=['DELETE'])
 def delete_settings(settings_id):
-    settings_list = storage_mgr.load_resource("settings")
-
-    print(f"Received settings_id for deletion: {settings_id}")
-    print(f"Existing settings before deletion: {settings_list}")
-
-    if not any(str(s["id"]) == str(settings_id) for s in settings_list):
-        return jsonify({"error": "Settings not found."}), 404
-
     try:
-        # ✅ Manually delete the setting and update storage
-        settings_list = [s for s in settings_list if str(s["id"]) != str(settings_id)]
-        storage_mgr.save_resource("settings", settings_list)
+        # Check if the setting exists
+        settings_list = storage_mgr.load_resource("settings")
+        if not any(str(s["id"]) == str(settings_id) for s in settings_list):
+            return jsonify({"error": "Settings not found."}), 404
 
-        print(f"Settings after deletion: {storage_mgr.load_resource('settings')}")
+        # Use storage_mgr.delete_resource to remove the setting
+        storage_mgr.delete_resource("settings", settings_id)
 
         return jsonify({"message": "Settings deleted successfully"}), 204
     except Exception as e:
