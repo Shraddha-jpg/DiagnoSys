@@ -99,6 +99,34 @@ Together, these components provide an effective performance monitoring tool for 
 ![Storage System Simulator UI Latency Dashboard](images/graphs.png)
 
 
+### System Logs: Local vs Global
+
+The **System Logs** module provides visibility into system activities, helping users trace operations such as snapshot cleanup, system creation, deletions, and errors.
+
+#### Local Logs
+- **Scope:** Logs specific to the local simulation environment or a particular instance/volume.
+- **Purpose:** Ideal for debugging operations tied to a specific volume, snapshot process, or system behavior.
+- **Examples:** Deletion of snapshots, snapshot cleanup routines, and volume-specific storage capacity changes.
+
+![Storage System Simulator UI Local Logs](images/locallogs.png)
+
+
+#### Global Logs
+- **Scope:** Logs that encompass the entire simulation platform or multiple components across the environment.
+- **Purpose:** Useful for understanding system-wide behavior, lifecycle events, and global policies in effect.
+- **Examples:** System creation or deletion attempts, fault injection events, warnings on duplicate actions (e.g., trying to create a system that already exists).
+
+![Storage System Simulator UI Global Logs](images/globallogs.png)
+
+
+#### Features
+- **Real-Time Log Display:** The log console updates in real time to reflect system actions.
+- **Log Filtering:** Users can toggle between `Local Logs` and `Global Logs` for targeted analysis.
+
+This logging system ensures transparency, helping users simulate, observe, and validate storage system behaviors under varying workloads and policies.
+
+
+
 
 
 
