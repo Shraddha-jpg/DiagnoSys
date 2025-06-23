@@ -39,6 +39,10 @@ Similar to systems, volumes are also associated with a UUID, generated using the
 
 The **Host** object in the Storage System Simulator represents a computing entity that connects to storage resources. Each host is defined by a unique **Host Name**, an **Application Type** (e.g., HPE, VMware, Oracle,SQL), and a **Protocol** (e.g., FC - Fibre Channel, iSCSI,NVMe). This setup allows users to simulate real-world host configurations and their interaction with storage volumes. 
 
+![Storage System Simulator UI for Host](images/host.png)
+
+
+
 
 
 
