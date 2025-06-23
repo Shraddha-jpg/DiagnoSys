@@ -35,7 +35,12 @@ Shown below is the response for successful creation of a volume, along with sett
 
 Similar to systems, volumes are also associated with a UUID, generated using the same python function **str(uuid.uuid4())**, and also have CRUD fucntionalities, as shown in the UI. Specifics of the Settings object and its types will be detailed further below.
 
-You can choose to apply settings to each individual volume, as shown below on successful application: 
+You can choose to apply settings to each individual volume, by following the steps mentioned below: 
+1) Select the Volume that you would want to apply settings on
+2) Select settings created from the drop down menu
+3) Click "Update" to ensure that the settings are applied.
+
+The settings are applied effectively only once the volumes are exported. 
 
 ![Storage System Simulator UI for Volume](images/volumesettingsreponse.png)
 
