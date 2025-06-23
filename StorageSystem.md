@@ -7,4 +7,8 @@ With a sleek user interface, users can easily create new systems, view all confi
 
 ![Storage System Simulator UI](images/system.png)
 
+On successfully creating a system, the following response will be displayed with port number assigned to the system along with a unique ID
+
+![System creation response](images/response.png)
+
 
