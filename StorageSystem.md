@@ -126,6 +126,51 @@ The **System Logs** module provides visibility into system activities, helping u
 This logging system ensures transparency, helping users simulate, observe, and validate storage system behaviors under varying workloads and policies.
 
 
+### Replication Link Fault Injection
+
+The **Replication Link Fault Injection** tool enables simulation of network faults or delays on synchronous replication links between storage systems. 
+
+![Storage System Simulator UI Replication Link](images/replicationlinkfaultinjection.png)
+
+
+#### Configuration Options
+
+- **Select System Link:**
+  - Dropdown list of systems with **synchronously replicated volumes**.
+  - Only eligible links are shown to prevent injection on non-replicated or asynchronously replicated systems.
+
+- **Sleep Time (ms):**
+  - Specifies the **artificial delay** (in milliseconds) to be introduced in replication operations.
+
+- **Fault Duration (seconds):**
+  - Defines how long the fault should persist.
+  - A value of `0` implies a **permanent fault**—lasting until the replication volume is unexported or manually cleared.
+  - Any positive integer sets a temporary fault duration, useful for short-lived simulations or automated recovery tests.
+
+#### Actions
+
+- **Inject Fault (Red Button):**
+  - Applies the defined fault settings to the selected system.
+  - Triggers logs and visual indicators to reflect performance impact.
+
+- **Cancel (Purple Button):**
+  - Clears the current configuration and exits fault injection mode without making changes.
+
+#### Use Case Scenarios
+
+- **Performance Testing:** Evaluate how the system behaves under increased latency during replication.
+
+### JSON data
+
+The NavBar lets you toggle between and view JSON data for all the objects(i.e, System, Volume, Settings and Host) as shown below. 
+
+![Storage System Simulator UI NavBar](images/navbar.png)
+
+
+
+
+
+
 
 
 
