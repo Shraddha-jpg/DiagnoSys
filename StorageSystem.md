@@ -38,7 +38,8 @@ Similar to systems, volumes are also associated with a UUID, generated using the
 You can choose to apply settings to each individual volume, by following the steps mentioned below: 
 1) Select the Volume that you would want to apply settings on
 2) Select settings created from the drop down menu
-3) Click "Update" to ensure that the settings are applied.
+3) Click on Add(Purple Button) to add one or more settings to the volume.
+4) Click "Update" to ensure that the settings are applied.
 
 The settings are applied effectively only once the volumes are exported to their respective hosts.
 
