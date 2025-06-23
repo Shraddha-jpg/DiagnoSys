@@ -41,6 +41,69 @@ The **Host** object in the Storage System Simulator represents a computing entit
 
 ![Storage System Simulator UI for Host](images/host.png)
 
+On successful creation of host, the following dialog box is displayed
+
+![Storage System Simulator UI for Host](images/hostcreation.png)
+
+### Export Volume
+
+The **Export Volume** feature links a defined volume to a specific host, simulating the process of exposing storage to computing resources in real-world storage systems. Users can select a configured **Volume** and **Host**, then specify a **Workload Size** (e.g., 4 KB to 128 KB) to simulate different I/O block sizes for performance modeling. This enables realistic testing of how various hosts interact with volumes under different data loads. The feature is essential for evaluating storage behavior, workload planning, and system validation in simulated environments.
+
+![Storage System Simulator UI for Host](images/exportvolume.png)
+
+On succesful export,the following dialog box appears:
+
+![Storage System Simulator UI for Host](images/exportvolumecreation.png)
+
+
+
+### Unexport Volume
+
+The **Unexport Volume** functionality allows users to detach or revoke access of a previously exported volume from a host. By selecting the target **Volume** from the dropdown, users can easily remove its association with any host, effectively simulating the process of unmapping storage in real-world SAN or NAS environments. This action is essential for lifecycle management, allowing for the reallocation of storage resources, cleanup of test configurations, or security isolation. The clean interface ensures safe and controlled unexport operations with a single click.
+
+![Storage System Simulator UI for Host](images/unexportvolume.png)
+
+### Settings Object
+
+The **Settings** module in the Storage System Simulator enables users to define and manage system behaviors such as **Snapshot** policies and **Replication** policies. 
+
+![Storage System Simulator UI for Host](images/settings.png)
+
+### Snapshot Settings
+
+The **Snapshot Settings** module enables users to define automated snapshot policies for data protection and recovery simulation. Each setting is composed of a unique **Setting Name**, a **Setting Type** (set to `Snapshot`), a configurable **Snapshot Frequency** (custom interval and unit such as minutes, hours, or days), and a defined limit for **Max Snapshots** to control resource usage.
+This feature empowers users to simulate real-world snapshot scheduling strategies, analyze system behavior under frequent data capture scenarios, and ensure efficient space management. 
+
+![Storage System Simulator UI for Host](images/snapshotsettings.png)
+
+
+### Replication Settings
+
+The **Replication Settings** section in the Storage System Simulator allows users to configure data replication policies between storage systems, simulating real-world disaster recovery and high-availability scenarios. Users begin by assigning a unique **Setting Name** and selecting the **Setting Type** as `Replication`. The **Replication Type** can be set to either `Synchronous` (real-time mirroring) or `Asynchronous` (delayed replication), depending on the performance and consistency requirements of the environment.
+A configurable **Delay (in seconds)** is available for asynchronous setups to simulate network lag or scheduled transfer intervals. The **Target System** dropdown lets users choose a destination system for the replication, enabling simulation of cross-system data redundancy or geo-distributed architecture. 
+
+![Storage System Simulator UI for Host](images/replicationsettings.png)
+
+
+With options to **Create**, **View**, **Update**, or **Delete** settings, this feature empowers users to model robust data replication strategies and test their effectiveness within the simulator.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
