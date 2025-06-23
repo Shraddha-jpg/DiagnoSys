@@ -5,6 +5,6 @@ The first core entity in this simulator is the **System** object, which allows u
 **Max Throughput (in MB/s)** and **Max Capacity (in GB)**. 
 With a sleek user interface, users can easily create new systems, view all configured systems, or delete them as needed. 
 
-![Storage System Simulator UI](images/system.jpg)
+![Storage System Simulator UI](images/system.png)
 
 
