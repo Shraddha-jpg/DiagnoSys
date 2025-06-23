@@ -94,7 +94,7 @@ The **Latency Monitoring Dashboard** provides real-time insight into system perf
 
 Below the ranking table, a dynamic line chart illustrates **Latency Trends** for individual volumes, capturing fluctuations in latency values over the monitored period. This visualization allows users to evaluate the consistency of I/O performance and assess the impact of workloads or policies applied to volumes in the simulator.
 
-Together, these components provide an effective performance monitoring tool for testing storage configurations under load and ensuring SLA compliance in simulated environments.
+Together, these components provide an effective performance monitoring tool for testing storage configurations under load in simulated environments.
 
 ![Storage System Simulator UI Latency Dashboard](images/graphs.png)
 
