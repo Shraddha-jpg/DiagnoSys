@@ -130,7 +130,7 @@ This logging system ensures transparency, helping users simulate, observe, and v
 
 The **Replication Link Fault Injection** tool enables simulation of network faults or delays on synchronous replication links between storage systems. 
 
-![Storage System Simulator UI Replication Link](images/replicationlinkfaultinjection.png)
+![Storage System Simulator UI Replication Link](images/replicationfaultlink.png)
 
 
 #### Configuration Options
