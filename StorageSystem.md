@@ -88,6 +88,19 @@ A configurable **Delay (in seconds)** is available for asynchronous setups to si
 With options to **Create**, **View**, **Update**, or **Delete** settings, this feature empowers users to model robust data replication strategies and test their effectiveness within the simulator.
 
 
+### ⏱️ Latency Monitoring Dashboard
+
+The **Latency Monitoring Dashboard** provides real-time insight into system performance by tracking and visualizing I/O latency across volumes. The **Top 5 Volumes by Latency (Last 15 Min)** table ranks exported volumes based on their average response time, helping users quickly identify performance bottlenecks. Each entry includes the **Volume Name**, associated **Host**, and **Average Latency (in ms)** over the past 15 minutes.
+
+Below the ranking table, a dynamic line chart illustrates **Latency Trends** for individual volumes, capturing fluctuations in latency values over the monitored period. This visualization allows users to evaluate the consistency of I/O performance and assess the impact of workloads or policies applied to volumes in the simulator.
+
+Together, these components provide an effective performance monitoring tool for testing storage configurations under load and ensuring SLA compliance in simulated environments.
+
+![Storage System Simulator UI Latency Dashboard](images/graphs.png)
+
+
+
+
 
 
 
