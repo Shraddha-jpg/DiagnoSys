@@ -37,7 +37,7 @@ Similar to systems, volumes are also associated with a UUID, generated using the
 
 You can choose to apply settings to each individual volume, as shown below on successful application: 
 
-![Storage System Simulator UI for Volume](images/volumesettingsresponse.png)
+![Storage System Simulator UI for Volume](images/volumesettingsreponse.png)
 
 
 ### Host Object
