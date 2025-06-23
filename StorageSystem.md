@@ -1,4 +1,4 @@
-### Storage System Simulator
+# Storage System Simulator
 
 The **Storage System Simulator** is an intuitive and interactive web-based tool designed to simulate the working of storage systems efficiently. 
 
