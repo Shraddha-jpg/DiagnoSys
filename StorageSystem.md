@@ -11,4 +11,10 @@ On successfully creating a system, the following response will be displayed with
 
 ![System creation response](images/response.png)
 
+The storage system handles duplicate system creation efficiently by displaying the following error when user tries to create a system in the same instance. 
+
+![System creation response error](images/responseerror.png)
+
+
+
 
