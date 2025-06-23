@@ -27,6 +27,18 @@ The view all button displays all systems created under the current instance alon
 
 The **Volume** object represents an individual storage unit that can be created within a specific system in the Storage System Simulator. Each volume requires a unique **Volume Name**, a defined **Volume Size (in GB)**, and an association with an existing setting through the **Select Volume** dropdown. This feature allows users to simulate multiple volumes within storage systems, enabling better testing and modeling of storage allocation scenarios like system utilization.
 
+![Storage System Simulator UI for Volume](images/volume.png)
+
+Shown below is the response for successful creation of a volume, along with settings(to be applied as of the picture) and other attributes. 
+
+![Storage System Simulator UI for Volume](images/volumecreationresponse.png)
+
+
+
+
+
+
+
 
 
 
