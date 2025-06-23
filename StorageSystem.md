@@ -15,6 +15,12 @@ The storage system handles duplicate system creation efficiently by displaying t
 
 ![System creation response error](images/responseerror.png)
 
+The view all button displays all systems created under the current instance along with their attributes(max capacity,max throughput and name) as shown below. There are also update and delete functionalities that allow users to alter the attribute values or delete the system permanently. 
+
+![System creation response view all](images/viewall.png)
+
+
+
 
 
 
