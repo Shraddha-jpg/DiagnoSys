@@ -40,7 +40,7 @@ You can choose to apply settings to each individual volume, by following the ste
 2) Select settings created from the drop down menu
 3) Click "Update" to ensure that the settings are applied.
 
-The settings are applied effectively only once the volumes are exported. 
+The settings are applied effectively only once the volumes are exported to their respective hosts.
 
 ![Storage System Simulator UI for Volume](images/volumesettingsreponse.png)
 
