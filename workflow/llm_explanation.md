@@ -89,6 +89,8 @@ The RCA chatbot processes user queries (e.g., "Why is system 5002 experiencing h
 - **Query Input**:
   - Captures user queries via `st.chat_input`.
   - Appends queries to `st.session_state.messages` with `is_formatted=False`.
+ 
+![LLM Workflow diagram](llm_workflow_diagram.png)
 
 ### 3. LangGraph Workflow
 The workflow is defined using a `StateGraph` with `AgentState`:
