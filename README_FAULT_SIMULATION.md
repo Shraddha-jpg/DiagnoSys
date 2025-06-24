@@ -34,11 +34,10 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 
 ### 2. Run app1.py for System 5001
 - Open a new terminal in your project directory.
-- Run the following command:
+- Run the following command in a new terminal:
   ```bash
-  python app1.py :for 5001
+  python app1.py
   ```
-  *(Adjust the argument if `app1.py` expects a different flag or input for the system name.)*
 
 ---
 
@@ -118,12 +117,10 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 ### 2. Run app1.py for System 5002
 - Open a new terminal in your project directory.
-- Run the following command:
+- Run the following command in a new terminal:
   ```bash
-  python app1.py :for 5002 
+  python app1.py 
   ```
-  *(Adjust the argument if `app1.py` expects a different flag or input for the system name.)*
-
 ---
 
 ### 3. Create the Storage System and Resources
@@ -207,10 +204,10 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 - Open a new terminal in your project directory.
 - Run the following commands:
   ```bash
-  python app1.py :for 5003
-  python app1.py :for 5004
+  python app1.py 
   ```
-  *(Adjust the argument if `app1.py` expects a different flag or input for the system name.)*
+  Run the above command in seperate terminals,one for each system.
+
 
 ---
 
