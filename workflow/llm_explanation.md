@@ -1,7 +1,7 @@
-# Documentation: LLM Usage in `llm.py` RCA Chatbot
+# Documentation: LLM Usage in `agent.py` RCA Chatbot
 
 ## Overview
-The `llm.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
+The `agent.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
 
 ## LLM Details
 ### Model Used
@@ -184,7 +184,7 @@ class AgentState(TypedDict):
   - Skips if `fault_analysis` has an error.
   - Extracts `tool_name` and `parameters` from `fault_analysis["tool_call"]`.
   - Validates tool existence and required parameters.
-  - Executes tool’s `run` function with parameters.
+  - Executes tool's `run` function with parameters.
   - Updates `fault_analysis` with tool output.
 - **Output**: `state` with refined `fault_analysis`.
 
@@ -288,7 +288,7 @@ class AgentState(TypedDict):
    - `data_instance_5002/` with JSON files.
 3. **Run**:
    ```bash
-   streamlit run llm.py
+   streamlit run agent.py
    ```
 
 4. **Supported Latency Issue Types**

@@ -26,17 +26,17 @@ This guide shows you how to simulate storage system faults using **only the web 
 
 Open a terminal in your project directory and run:
 ```bash
-streamlit run llm.py
+streamlit run agent.py
 ```
 This will launch the web UI. Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 ---
 
-### 2. Run app1.py for System 5001
+### 2. Run app.py for System 5001
 - Open a new terminal in your project directory.
 - Run the following command in a new terminal:
   ```bash
-  python app1.py
+  python app.py
   ```
 
 ---
@@ -109,17 +109,17 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 
 If you haven't already, open a terminal in your project directory and run:
 ```bash
-streamlit run llm.py
+streamlit run agent.py
 ```
 Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 ---
 
-### 2. Run app1.py for System 5002
+### 2. Run app.py for System 5002
 - Open a new terminal in your project directory.
 - Run the following command in a new terminal:
   ```bash
-  python app1.py 
+  python app.py 
   ```
 ---
 
@@ -194,17 +194,17 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 If you haven't already, open a terminal in your project directory and run:
 ```bash
-streamlit run llm.py
+streamlit run agent.py
 ```
 Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 ---
 
-### 2. Run app1.py for System 5003 and System 5004
+### 2. Run app.py for System 5003 and System 5004
 - Open a new terminal in your project directory.
 - Run the following commands:
   ```bash
-  python app1.py 
+  python app.py 
   ```
   Run the above command in seperate terminals,one for each system.
 
@@ -296,4 +296,4 @@ If you want to add more scenarios or need further customization, let me know!
 ## Notes
 - You can adjust parameters (sizes, workload, snapshot frequency, fault duration) to create custom scenarios.
 - For each scenario, the LLM agent will analyze the current state and provide a root cause report and recommendations.
-- For more details, see `testcase_values.txt` and the main README. 
+- For more details, see testcases.txt and the main README. 
