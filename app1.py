@@ -11,6 +11,8 @@ import json
 import requests
 import re
 import random
+import sys
+import argparse
 
 app = Flask(__name__)
 
@@ -19,6 +21,12 @@ print("Flask app is starting...")
 GLOBAL_FILE = "global_systems.json"  
 ENABLE_UI = True 
 
+# Parse --port argument if provided
+parser = argparse.ArgumentParser()
+parser.add_argument('--port', type=int, default=None)
+args, unknown = parser.parse_known_args()
+
+# Use the port from argument if provided, else fallback
 
 def find_available_port(start=5000, max_instances=50):
     for port in range(start, start + max_instances):
@@ -28,15 +36,22 @@ def find_available_port(start=5000, max_instances=50):
     raise RuntimeError("No available ports found!")
 
 def find_port():
+    if args.port:
+        return args.port
     return int(os.getenv("FLASK_PORT", find_available_port()))
 PORT = find_port() 
 
-# Unique data directory for this instance
-DATA_DIR = f"data_instance_{PORT}"
+# Unique data directory for this instance under 'data/'
+BASE_DATA_DIR = os.path.join(os.getcwd(), 'data')
+os.makedirs(BASE_DATA_DIR, exist_ok=True)
+GLOBAL_FILE = os.path.join(BASE_DATA_DIR, "global_systems.json")
+GLOBAL_LOG_FILE = os.path.join(BASE_DATA_DIR, "global_logs.txt")
+
+DATA_DIR = os.path.join(BASE_DATA_DIR, f"data_instance_{PORT}")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # Initialize logger
-logger = Logger(port=PORT, data_dir=DATA_DIR)
+logger = Logger(port=PORT, data_dir=DATA_DIR, global_log_file=GLOBAL_LOG_FILE)
 
 # Initialize storage manager for this instance
 storage_mgr = StorageManager(DATA_DIR, GLOBAL_FILE, logger=logger)
@@ -1080,8 +1095,8 @@ def get_replication_targets():
     return jsonify({"targets": targets}), 200
 
 #LOG_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/logs_5000.txt")
-LOG_FILE = os.path.join(data_dir, f"logs_{PORT}.txt")
-VOLUME_FILE= os.path.join(data_dir, "volume.json")
+LOG_FILE = os.path.join(DATA_DIR, f"logs_{PORT}.txt")
+VOLUME_FILE= os.path.join(DATA_DIR, "volume.json")
 #VOLUME_FILE = os.path.join(storage_mgr.data_dir, "data_instance_5000/volume.json")
 
 
@@ -1151,7 +1166,7 @@ def get_latency():
         return jsonify({"error": str(e)}), 500
     
 
-LOG_FILE = os.path.join(data_dir, f"logs_{PORT}.txt")
+LOG_FILE = os.path.join(DATA_DIR, f"logs_{PORT}.txt")
 
 # ... existing code ...
 @app.route('/api/top-latency', methods=['GET'])

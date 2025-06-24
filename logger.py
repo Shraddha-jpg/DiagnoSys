@@ -7,11 +7,11 @@ import re
 MAX_RETENTION_LOG = 5  # Max retention time in minutes for local log file. Set to None for no limit.
 
 class Logger:
-    def __init__(self, port, data_dir):
+    def __init__(self, port, data_dir, global_log_file=None):
         self.port = port
         self.data_dir = data_dir
         self.local_log_file = os.path.join(data_dir, f"logs_{port}.txt")
-        self.global_log_file = "global_logs.txt"
+        self.global_log_file = global_log_file or "global_logs.txt"
         self.lock = threading.Lock()  # Thread-safe logging
 
         # Create log files if they don't exist
