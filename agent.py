@@ -525,11 +525,11 @@ app = workflow.compile()
 # === Streamlit UI ===
 def main():
     st.set_page_config(
-        page_title=f"RCA InsightBot",
+        page_title=f"DiagnoSys Bot",
         page_icon="🤖",
         layout="wide"
     )
-    st.title(f"🤖RCA InsightBot ")
+    st.title(f"🤖DiagnoSys Bot")
     st.markdown("""
     This is an interactive chatbot that helps analyze system faults and provides detailed RCA (Root Cause Analysis) reports.
     """)
