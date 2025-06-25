@@ -10,6 +10,7 @@ A problem space defines a domain (e.g., storage systems) for which the agent can
 
 - Each subfolder (e.g., `storage_system/`) contains:
   - Prompts (`analyze_prompt.txt`, `format_prompt.txt`)
+  - Support documents (`rag.txt`)
   - Data models (`data_model.json`)
   - Tools (`tools/` with Python scripts)
   - Configuration (`tools.json`)
