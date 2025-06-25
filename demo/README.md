@@ -35,7 +35,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 - Open a new terminal in your project directory.
 - Run the following command in a new terminal:
   ```bash
-  python app.py
+  python app.py --port 5001
   ```
 
 ---
@@ -118,7 +118,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 - Open a new terminal in your project directory.
 - Run the following command in a new terminal:
   ```bash
-  python app.py 
+  python app.py --port 5002
   ```
 ---
 
@@ -203,7 +203,8 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 - Open a new terminal in your project directory.
 - Run the following commands:
   ```bash
-  python app.py 
+  python app.py --port 5003
+  python app.py --port 5004
   ```
   Run the above command in seperate terminals,one for each system.
 
