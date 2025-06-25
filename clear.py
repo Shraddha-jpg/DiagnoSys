@@ -50,6 +50,8 @@ def cleanup_directory(directory_path):
                 if file in ['config.json', 'tools.json', 'data_model.json']:
                     print(f"Skipping protected JSON file: {os.path.join(root, file)}")
                     continue
+                if file.endswith('.md'):
+                    continue
                 json_path = os.path.join(root, file)
                 try:
                     os.remove(json_path)

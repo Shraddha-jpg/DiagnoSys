@@ -1,4 +1,6 @@
-# Storage System AI Diagnostic Agent
+<h1 align="center">Storage System AI Diagnostic Agent</h1>
+
+![Overview of project](ui/overview.png)
 
 An AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
 
@@ -49,27 +51,12 @@ The AI agent currently supports diagnosis of three primary latency fault categor
    pip install -r requirements.txt
    ```
 
-3. Set environment variables:
-
-   Create a `.env` file in the project root directory and add:
-
-   ```env
-   GROQ_API_KEY=your_groq_api_key_here
-   ```
-
-4. Provide support documentation:
-
-   Place your storage system's technical documentation or operational guides in the project root directory as either:
-
-   - `support_documentation.pdf`
-   - `support_documentation.txt`
-
 ## Running the Agent
 
 To start the Streamlit web application, run:
 
 ```bash
-streamlit run llm.py
+streamlit run agent.py
 ```
 
 Once the app launches, open your browser and navigate to:
@@ -84,9 +71,9 @@ Once the app launches, open your browser and navigate to:
 2. **Enter a Query**  
    In the text input area, type a natural language query about system performance or a specific latency event.  
    _Example:_  
-   `"Why was my latency unusually high in system 5003?`
+   `"Why is volume1 in system 5003 experiencing high latency?`
 
-3. **Review the AI’s Analysis**  
+3. **Review the AI's Analysis**  
    The agent will:
    - Fetch relevant metrics and logs.
    - Perform AI-based analysis.
@@ -95,18 +82,7 @@ Once the app launches, open your browser and navigate to:
 5. **Ask Follow-up Questions**  
    Continue the session by typing new, related queries to dive deeper into metrics or request targeted suggestions.  
    _Example:_  
-   `"Show replication lag trend over the past 24 hours"`
-
-## Metrics Files Reference
-
-The AI agent reads from these key data sources:
-
-| File Name                  | Description                                              |
-|:--------------------------|:---------------------------------------------------------|
-| `system_metrics.json`      | System-wide metrics like capacity, throughput, and saturation |
-| `io_metrics.json`          | Detailed I/O performance metrics by storage volume and host |
-| `replication_metrics.json` | Replication-specific metrics including link health, lag, and transfer rates |
-| Log Files (`logs/*.log`)   | System events, error logs, warnings, and informational messages |
+   `"Is system 5003 experiencing any replication issues currently?"`
 
 ## Visualizations
 
@@ -119,35 +95,34 @@ Streamlit-powered interactive dashboards visualize:
 **To extend diagnostic capabilities:**
 
 1. **Add New Tool Functions**  
-   Create additional data retrieval and analysis functions in `ai_tools.py`.
+   Create additional data retrieval and analysis functions.
 
 2. **Update Documentation Corpus**  
-   Add new PDFs or text files containing operational manuals, KB articles, or troubleshooting guides into the project root.
+   Add new text files containing operational manuals, KB articles, or troubleshooting guides into the project root.
 
 3. **Enhance Visualizations**  
-   Update the Streamlit app (`llm.py`) to visualize new metrics or analysis results.
+   Update the Streamlit app (`agent.py`) to visualize new metrics or analysis results.
 
+## Documentation Index
+
+For detailed instructions, examples, and component overviews, refer to:
+
+- [Project Overview](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/README.md)
+
+- [Fault Simulation Guide and Demo](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/demo/README.md)
+
+- [Overview of Core Utilities and Storage File Formats used](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/utils/README.md)
+
+- [UI Details & Walkthrough Screenshots](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/ui/README.md)
+
+- [Overview of Problem Spaces](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/problem_spaces/README.md)
+
+- [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/demo/testcases.txt)
+
+- [LLM Agentic Workflow Insights](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/workflow/README.md)
+
+For step-by-step fault reproduction, UI screenshots, and simulated environment setup, consult the relevant guides above.
 
 ## License
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
-
-## Example `.env` File
-
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-## Example `requirements.txt`
-
-```
-streamlit
-python-dotenv
-groq-sdk
-pandas
-matplotlib
-seaborn
-numpy
-pdfplumber
-```
