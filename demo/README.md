@@ -289,7 +289,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 ### 5. Simulate the Fault and Analyze with LLM
 - 1) In the chat input of the UI, enter the following prompt for the source system:
   ```
-  Why is volume v1 in System 5003 experiencing high latency?
+  Why is volume3 in System 5003 experiencing high latency?
   ```
 - Submit the prompt.
 - 2) In the chat input of the UI, enter the following prompt for the target system:
