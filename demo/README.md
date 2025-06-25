@@ -90,7 +90,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 ### 5. Simulate the Fault and Analyze with LLM
 - In the chat input of the UI, enter the following prompt:
   ```
-  Why is volume v3 in System 5001 experiencing high latency?
+  Why is volume3 in System 5001 experiencing high latency?
   ```
 - Submit the prompt.
 
