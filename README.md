@@ -97,17 +97,6 @@ Once the app launches, open your browser and navigate to:
    _Example:_  
    `"Show replication lag trend over the past 24 hours"`
 
-## Metrics Files Reference
-
-The AI agent reads from these key data sources:
-
-| File Name                  | Description                                              |
-|:--------------------------|:---------------------------------------------------------|
-| `system_metrics.json`      | System-wide metrics like capacity, throughput, and saturation |
-| `io_metrics.json`          | Detailed I/O performance metrics by storage volume and host |
-| `replication_metrics.json` | Replication-specific metrics including link health, lag, and transfer rates |
-| Log Files (`logs/*.log`)   | System events, error logs, warnings, and informational messages |
-
 ## Visualizations
 
 Streamlit-powered interactive dashboards visualize:
@@ -127,27 +116,28 @@ Streamlit-powered interactive dashboards visualize:
 3. **Enhance Visualizations**  
    Update the Streamlit app (`agent.py`) to visualize new metrics or analysis results.
 
+## Documentation Index
+
+For detailed instructions, examples, and component overviews, refer to:
+
+- Project Overview : [README.md] (https://github.com/Dhanush-M555/HPE_GenAI/final-doc/README.md)
+
+- Fault Simulation Guide : README_FAULT_SIMULATION.md
+
+- Data File Breakdown: utils/UTILS.md
+
+- UI Details & Screenshots: ui/UI.md
+
+- RAG Prompt Structure & Data Models: problem_spaces/PROBLEM_SPACES.md
+
+- Test Case Configurations: testcases.txt
+
+- Storage File Formats Explained: utils/UTILS.md
+
+- LLM Workflow Insights: workflow/llm_explanation.md
+
+For step-by-step fault reproduction, UI screenshots, and simulated environment setup, consult the relevant guides above.
 
 ## License
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
-
-## Example `.env` File
-
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-## Example `requirements.txt`
-
-```
-streamlit
-python-dotenv
-groq-sdk
-pandas
-matplotlib
-seaborn
-numpy
-pdfplumber
-```

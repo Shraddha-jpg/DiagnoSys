@@ -1,4 +1,4 @@
-# End-to-End Fault Simulation & LLM Diagnosis Guide
+<h1 align="center">End-to-End Fault Simulation & LLM Diagnosis Guide</h1>
 
 This guide walks you through simulating three real-world storage system fault scenarios from scratch using the codebase in this repository. You will:
 - Set up storage systems, volumes, hosts, snapshots, and replication links
@@ -51,7 +51,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
   - **Max Throughput:** 400 MB/s
   - **Max Capacity:** 2500 GB
 
-![f1_sys](images/demo/f1_sys.png)
+![f1_sys](..ui/images/demo/f1_sys.png)
 
 #### b. Add Volumes
 - Add three volumes to System 5001:
@@ -59,7 +59,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
   - **Volume2:** 200 GB
   - **Volume3:** 150 GB
 
-![f1_volume](images/demo/f1_volume.png)
+![f1_volume](..ui/images/demo/f1_volume.png)
 
 #### c. Add Hosts
 - Add three hosts:
@@ -67,7 +67,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
   - **Host2**
   - **Host3**
 
-![f1_host](images/demo/f1_host.png)
+![f1_host](..ui/images/demo/f1_host.png)
 
 #### d. Export Volumes to Hosts with Workload
 - Export each volume to a host with the following settings:
@@ -77,14 +77,14 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 
   *(If the UI does not have fields for workload size and IOPS, set these values as close as possible to the above.)*
 
-![f1_export](images/demo/f1_export.png)
+![f1_export](..ui/images/demo/f1_export.png)
 
 ---
 
 ### 4. Let the System Run
 - **Wait 1-2 minutes** to allow the system to generate metrics and simulate the workload.Monitor the top average volume latencies for an increase in latency. 
 
-![f1_latency](images/demo/f1_latency.png)
+![f1_latency](..ui/images/demo/f1_latency.png)
 ---
 
 
@@ -133,7 +133,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
   - **Max Throughput:** 300 MB/s
   - **Max Capacity:** 2000 GB
 
-![f2_sys](images/demo/f2_sys.png)
+![f2_sys](..ui/images/demo/f2_sys.png)
 
 #### b. Add Volumes (with Snapshot Settings)
 - Add three volumes to System 5002:
@@ -143,7 +143,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
   *(If the UI allows, set these snapshot settings when creating the volumes. If not, edit the volume after creation to add snapshot settings.)*
 
-![f2_settings](images/demo/f2_settings.png)
+![f2_settings](..ui/images/demo/f2_settings.png)
 #### c. Add Hosts
 - Add two hosts:
   - **Host1**
@@ -155,7 +155,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
   - **Volume2 → Host2:** Workload size = 8 KB, IOPS = 2000
   - **Volume3 → Host1:** Workload size = 4 KB, IOPS = 2000
 
-![f2_export](images/demo/f2_export.png)
+![f2_export](..ui/images/demo/f2_export.png)
   *(If the UI does not have fields for workload size and IOPS, set these values as close as possible to the above.)*
 
 #### e. Start Snapshots
@@ -170,7 +170,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 ### 4. Let the System Run
 - **Wait a few minutes** to allow snapshots and metrics to accumulate and simulate the overload.Monitor the top average volume latencies for an increase in latency. 
-![f2_latency](images/demo/f2_latency.png)
+![f2_latency](..ui/images/demo/f2_latency.png)
 ---
 
 ### 5. Simulate the Fault and Analyze with LLM
@@ -221,7 +221,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
   - **Max Throughput:** 350 MB/s
   - **Max Capacity:** 1500 GB
 
-![f3_sys1](images/demo/f3_sys1.png)
+![f3_sys1](..ui/images/demo/f3_sys1.png)
 
 #### b. Create the Target System
 - Use the UI controls to create another system with:
@@ -229,7 +229,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
   - **Max Throughput:** 250 MB/s
   - **Max Capacity:** 2500 GB
 
-![f3_sys2](images/demo/f3_sys2.png)
+![f3_sys2](..ui/images/demo/f3_sys2.png)
 
 #### c. Add Volume to Source System (with Replication Settings)
 - Add a volume to System 5003:
@@ -237,25 +237,25 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
   - **Replication Settings:**
     - Replication type: Synchronous
     - Replication target: System 5004
-![f3_vol](images/demo/f3_vol.png)
-![f3_setting](images/demo/f3_setting.png)
+![f3_vol](..ui/images/demo/f3_vol.png)
+![f3_setting](..ui/images/demo/f3_setting.png)
 
 #### d. Add Host to Source System
 - Add a host:
   - **Host1**
-![f3_setting](images/demo/f3_setting.png)
+![f3_setting](..ui/images/demo/f3_setting.png)
 
 #### e. Export Volume to Host
 - Export **Volume1** to **Host1** with:
   - Workload size = 8 KB, IOPS = 2000
-![f3_export](images/demo/f3_export.png)
+![f3_export](..ui/images/demo/f3_export.png)
 
 #### f. Inject Replication Fault
 - Use the UI's replication fault injection feature to:
   - Set a delay of **3 ms** for the replication link between System 5003 and System 5004.
   - Set the fault duration to **600 seconds** (10 minutes).
 
-![f3_injection](images/demo/f3_injection.png)
+![f3_injection](..ui/images/demo/f3_injection.png)
 
 
 ---
@@ -263,7 +263,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 ### 4. Let the System Run
 - **Wait a few minutes** to allow metrics and replication events to accumulate and simulate the fault.Monitor the system logs in the UI.
 
-![f3_logs](images/demo/f3_logs.png)
+![f3_logs](..ui/images/demo/f3_logs.png)
 ---
 
 ### 5. Simulate the Fault and Analyze with LLM
