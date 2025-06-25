@@ -525,14 +525,13 @@ app = workflow.compile()
 # === Streamlit UI ===
 def main():
     st.set_page_config(
-        page_title=f"RCA Chatbot ({PROBLEM_SPACE})",
-        page_icon="🔍",
+        page_title=f"RCA InsightBot",
+        page_icon="🤖",
         layout="wide"
     )
-    st.title(f"🔍 RCA Chatbot ({PROBLEM_SPACE})")
+    st.title(f"🤖RCA InsightBot ")
     st.markdown("""
-    This chatbot helps analyze system faults and provides detailed RCA (Root Cause Analysis) reports.
-    Enter your query about system performance.
+    This is an interactive chatbot that helps analyze system faults and provides detailed RCA (Root Cause Analysis) reports.
     """)
 
     debug_mode = st.sidebar.checkbox("Debug Mode", value=False)

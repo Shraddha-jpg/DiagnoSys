@@ -1324,5 +1324,9 @@ def run_cleanup():
     
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT, debug=True,use_reloader=False)
-    print("Registered routes:", app.url_map)
+    print(f" * Run ui on http://127.0.0.1:{PORT}/ui")
+    import socket
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    print(f" * Run ui on http://{local_ip}:{PORT}/ui")
+    app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=False)

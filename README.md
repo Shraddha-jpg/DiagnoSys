@@ -1,5 +1,7 @@
 <h1 align="center">Storage System AI Diagnostic Agent</h1>
 
+![Overview of project](ui/overview.png)
+
 An AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
 
 ## Features
@@ -49,21 +51,6 @@ The AI agent currently supports diagnosis of three primary latency fault categor
    pip install -r requirements.txt
    ```
 
-3. Set environment variables:
-
-   Create a `.env` file in the project root directory and add:
-
-   ```env
-   GROQ_API_KEY=your_groq_api_key_here
-   ```
-
-4. Provide support documentation:
-
-   Place your storage system's technical documentation or operational guides in the project root directory as either:
-
-   - `support_documentation.pdf`
-   - `support_documentation.txt`
-
 ## Running the Agent
 
 To start the Streamlit web application, run:
@@ -84,7 +71,7 @@ Once the app launches, open your browser and navigate to:
 2. **Enter a Query**  
    In the text input area, type a natural language query about system performance or a specific latency event.  
    _Example:_  
-   `"Why was my latency unusually high in system 5003?`
+   `"Why is volume1 in system 5003 experiencing high latency?`
 
 3. **Review the AI's Analysis**  
    The agent will:
@@ -95,7 +82,7 @@ Once the app launches, open your browser and navigate to:
 5. **Ask Follow-up Questions**  
    Continue the session by typing new, related queries to dive deeper into metrics or request targeted suggestions.  
    _Example:_  
-   `"Show replication lag trend over the past 24 hours"`
+   `"Is system 5003 experiencing any replication issues currently?"`
 
 ## Visualizations
 
@@ -108,10 +95,10 @@ Streamlit-powered interactive dashboards visualize:
 **To extend diagnostic capabilities:**
 
 1. **Add New Tool Functions**  
-   Create additional data retrieval and analysis functions in `ai_tools.py`.
+   Create additional data retrieval and analysis functions.
 
 2. **Update Documentation Corpus**  
-   Add new PDFs or text files containing operational manuals, KB articles, or troubleshooting guides into the project root.
+   Add new text files containing operational manuals, KB articles, or troubleshooting guides into the project root.
 
 3. **Enhance Visualizations**  
    Update the Streamlit app (`agent.py`) to visualize new metrics or analysis results.

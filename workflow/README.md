@@ -1,19 +1,7 @@
-<h1 align="center">Overview of Agentic Workflow</h1>
+# Documentation: LLM Usage in `llm.py` RCA Chatbot
 
-This folder contains workflow diagrams and detailed explanations of the LLM-powered agentic workflow and analysis process.
-
-## Usage
-
-- Refer to this document for onboarding, debugging, or extending the workflow.
-- Update diagrams and explanations as the workflow evolves.
-
-## Workflow Diagram
-
-![Workflow Diagram](llm_workflow_diagram.png)
-
----
-# Overview of LLM Usage in `agent.py` RCA Chatbot
-The `agent.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
+## Overview
+The `llm.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
 
 ## LLM Details
 ### Model Used
@@ -57,8 +45,9 @@ The LLM is used in two primary stages of the workflow:
 
 The LLM processes structured prompts to ensure consistent outputs, leveraging its natural language understanding to interpret system data and generate actionable insights.
 
-## Agentic Workflow
-The RCA chatbot processes user queries (e.g., "Why is system 5002 experiencing high latency?") through a LangGraph-orchestrated workflow involving four agents: `extract_relevant_data`, `analyze_fault`, `tool_agent`, and `format_response`. The LLM is invoked in the `analyze_fault` and `format_response` agents. Below is a detailed explanation of the workflow.
+## Workflow
+![LLM Workflow diagram](images/workflow_diagram.png)
+The RCA chatbot processes user queries (e.g., "Why is volume1 in system 5002 experiencing high latency?") through a LangGraph-orchestrated workflow involving four agents: `extract_relevant_data`, `analyze_fault`, `tool_agent`, and `format_response`. The LLM is invoked in the `analyze_fault` and `format_response` agents. Below is a detailed explanation of the workflow.
 
 ### 1. Configuration and Initialization
 - **Configuration Loading**:
@@ -103,7 +92,6 @@ The RCA chatbot processes user queries (e.g., "Why is system 5002 experiencing h
   - Appends queries to `st.session_state.messages` with `is_formatted=False`.
 
 ### 3. LangGraph Workflow
-![LLM Workflow diagram](llm_workflow_diagram.png)
 The workflow is defined using a `StateGraph` with `AgentState`:
 ```python
 class AgentState(TypedDict):
@@ -176,16 +164,83 @@ class AgentState(TypedDict):
     - Handles errors (JSON parse or validation) by setting `fault_analysis` with error details.
   - Updates `state` with `fault_analysis` and `rag_context`.
 - **Output**: `state` with JSON fault analysis, e.g.:
-  ```json
-  {
-    "tool_call": {
-      "tool_name": "volume_contribution_calculator",
-      "parameters": {
-        "fault_analysis": {"fault_type": "High latency", "details": {...}},
-        "system_data": {...}
+  ```
+      {
+      "fault_type": "High latency due to replication link issues",
+      "details": {
+        "latency": 4.0,
+        "capacity_percentage": 6.666666666666667,
+        "saturation": 4.464285714285714,
+        "volume_capacity": 100.0,
+        "snapshot_capacity": 0,
+        "maximum_capacity": 1500,
+        "maximum_throughput": 350,
+        "volume_details": [
+          {
+            "volume_id": "bf5e323c-73cc-40e9-85d2-9af841de92bd",
+            "name": "volume1",
+            "size": 100,
+            "snapshot_count": 0,
+            "throughput": 15.625,
+            "workload_size": 8
+          }
+        ],
+        "replication_issues": [
+          {
+            "volume_id": "bf5e323c-73cc-40e9-85d2-9af841de92bd",
+            "volume_name": "volume1",
+            "target_id": "c65b3111-1903-424c-a9db-7f64fb4b0191",
+            "target_system_name": "System 5004",
+            "latency": 3.049,
+            "timestamp": "2025-06-25 17:17:22"
+          }
+        ]
+      },
+      "tool_call": {
+        "tool_name": "volume_contribution_calculator",
+        "parameters": {
+          "fault_analysis": {
+            "fault_type": "High latency due to replication link issues",
+            "details": {
+              "latency": 4.0,
+              "capacity_percentage": 6.666666666666667,
+              "saturation": 4.464285714285714,
+              "volume_capacity": 100.0,
+              "snapshot_capacity": 0,
+              "maximum_capacity": 1500,
+              "maximum_throughput": 350,
+              "volume_details": [
+                {
+                  "volume_id": "bf5e323c-73cc-40e9-85d2-9af841de92bd",
+                  "name": "volume1",
+                  "size": 100,
+                  "snapshot_count": 0,
+                  "throughput": 15.625,
+                  "workload_size": 8
+                }
+              ],
+              "replication_issues": [
+                {
+                  "volume_id": "bf5e323c-73cc-40e9-85d2-9af841de92bd",
+                  "volume_name": "volume1",
+                  "target_id": "c65b3111-1903-424c-a9db-7f64fb4b0191",
+                  "target_system_name": "System 5004",
+                  "latency": 3.049,
+                  "timestamp": "2025-06-25 17:17:22"
+                }
+              ]
+            }
+          },
+          "system_data": {
+            "id": "1e6f2186-0621-4e1e-95e5-34101a3a2247",
+            "name": "5003",
+            "max_throughput": 350,
+            "max_capacity": 1500
+          }
+        }
       }
     }
-  }
+
   ```
 - **Error Handling**: Sets `fault_analysis` with error details if LLM fails.
 
@@ -196,7 +251,7 @@ class AgentState(TypedDict):
   - Skips if `fault_analysis` has an error.
   - Extracts `tool_name` and `parameters` from `fault_analysis["tool_call"]`.
   - Validates tool existence and required parameters.
-  - Executes tool's `run` function with parameters.
+  - Executes tool’s `run` function with parameters.
   - Updates `fault_analysis` with tool output.
 - **Output**: `state` with refined `fault_analysis`.
 
@@ -217,15 +272,38 @@ class AgentState(TypedDict):
   - Sets `state["formatted_report"]` to the LLM output.
 - **Output**: `state` with `formatted_report`, e.g.:
   ```
-  Fault Report for System 5002 (Port: 5002)
-  Fault Type: High latency due to high capacity
-  Key Details:
-  - Latency: 5ms
-  - Capacity: 120%
-  - Saturation: 2.6%
-  Snapshot Information: 800 GB (66.67% of capacity)
-  ...
+  Fault Report for system 5001 (Port: 5001)
+  Fault Type: High latency due to high saturation
+  Key Details: 
+  - Latency: 3.0 ms
+  - Capacity Percentage: 19.0%
+  - Saturation: 82.03125%
+  - Volume Capacity: 475.0 GB
+  - Snapshot Capacity: 0 GB
+  - Maximum Capacity: 2500 GB
+  - Maximum Throughput: 400 MB/s
+
+  Volume Information:
+  - Volume3 (ee01cb1a-d9a6-4d2e-9001-6d0453771be7): size 150 GB, workload size 128 KB
+  - Volume1 (3714f063-5324-451e-80d7-fe956ac2f264): size 125 GB, workload size 8 KB
+  - Volume2 (9bbb0762-0eb8-4d15-897c-403fcdc05d22): size 200 GB, workload size 32 KB
+
+  Volume Contributions:
+  - Volume3 (ee01cb1a-d9a6-4d2e-9001-6d0453771be7): capacity contribution: 6.0% (saturation contribution: 62.5%)
+  - Volume2 (9bbb0762-0eb8-4d15-897c-403fcdc05d22): capacity contribution: 8.0% (saturation contribution: 15.62%)
+  - Volume1 (3714f063-5324-451e-80d7-fe956ac2f264): capacity contribution: 5.0% (saturation contribution: 3.91%)
+
+  Bully Volume: Volume3 with a saturation contribution of 62.5%
+  Highest contributor: Volume3 with the highest saturation contribution
+
+  Next Actions:
+  1. Review and optimize the workload size for Volume3 to reduce its saturation contribution.
+  2. Consider upgrading the system's maximum throughput to handle the current workload.
+  3. Monitor the system's saturation levels and adjust the volume configurations as needed to prevent future saturation issues.
+  4. Verify that the system's configuration is optimized for the current workload and make adjustments to prevent bottlenecks.
+  5. Check for any resource-intensive processes or applications that may be contributing to the high saturation and optimize or limit their resource usage.
   ```
+![example response](images/exampleresponse1.png)
 
 ### 4. Streamlit UI Output
 - **Query Processing**:
@@ -271,11 +349,29 @@ class AgentState(TypedDict):
 4. **Format Response**:
    - LLM generates report:
      ```
-     Fault Report for System 5002 (Port: 5002)
-     Fault Type: High latency due to high capacity
-     ...
-     Snapshot Information: 800 GB (66.67% of capacity)
-     ...
+      Fault Report for system 5002 (Port: 5002)
+      Fault Type: High latency due to high capacity
+      Key Details: 
+      - Latency: 4.0 ms
+      - Capacity Percentage: 97.5%
+      - Volume Capacity: 450.0 GB
+      - Snapshot Capacity: 1500.0 GB
+      - Maximum Capacity: 2000 GB
+      Volume Information: 
+      - Volume sizes range from 50 GB to 300 GB, with workload sizes between 4 KB and 32 KB.
+      Snapshot Information: 
+      - Snapshot counts range from 1 to 18 per volume.
+      Volume Contributions:
+      - volume1 (3d231fa0-528f-433d-a30e-24da2a7c89dd): capacity contribution: 47.5%
+      - volume2 (f5353377-f3b5-4ffd-995b-b49fd2ce744b): capacity contribution: 30.0%
+      - volume3 (1d9a9e02-fce9-4c19-a55e-40d1dba6072a): capacity contribution: 20.0%
+      Highest contributor: volume1, contributing 47.5% to the high capacity issue.
+      Next Actions: 
+      To address the high latency due to high capacity, consider the following actions:
+      - Review snapshot settings for volume1, which has the highest snapshot count (18), and adjust the snapshot retention policy to reduce storage usage.
+      - Evaluate the workload size and throughput for each volume, focusing on volume1, which has the highest workload size (32 KB) and throughput (62.5).
+      - Consider increasing the maximum capacity of the system or optimizing storage usage to reduce the capacity percentage.
+      - Monitor the system's capacity and latency closely, and adjust settings as needed to prevent further high latency issues.
      ```
 5. **Streamlit UI**:
    - Displays report with `st.code`.
@@ -322,4 +418,4 @@ The AI agent currently supports diagnosis of three primary latency fault categor
 5. **Test Queries**:
    - `Why is system 5002 experiencing high latency?`
    - `Why is system 5003 experiencing high latency?` (to test "System not found").
-   - `Why is volume 1 in system 5002 experiencing high latency` 
+   - `Why is volume1 in system 5002 experiencing high latency`

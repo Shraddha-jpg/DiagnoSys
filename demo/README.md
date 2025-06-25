@@ -11,11 +11,19 @@ This guide walks you through simulating three real-world storage system fault sc
 - Python 3.8+
 - All dependencies installed (`pip install -r requirements.txt`)
 - (Optional) Streamlit for the LLM UI: `pip install streamlit`
+- Set the Groq api key in your `agent.py`. A new api key can be created at [Groq_api_key_creation][https://console.groq.com/keys]:
 
+```
+# === CONFIG ===
+GROQ_API_KEY = "" 
+GROQ_MODEL = "llama-3.3-70b-versatile"
+```
 ---
 <h2 align="center">Fault Simulation Demo Guide (UI-Only)</h2>
 
-This guide shows you how to simulate storage system faults using **only the web UI** (Streamlit app). You do not need to run any Python code directly—just follow the steps in your browser!
+This guide shows you how to simulate storage system faults using **only the web UI** (Streamlit app).Follow the steps mentioned below:
+
+Note: The testcases simulated below are mentioned in [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/demo/testcases.txt)
 
 ---
 
@@ -90,7 +98,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 ### 5. Simulate the Fault and Analyze with LLM
 - In the chat input of the UI, enter the following prompt:
   ```
-  Why is volume3 in System 5001 experiencing high latency?
+  Why is volume v3 in System 5001 experiencing high latency?
   ```
 - Submit the prompt.
 
@@ -99,6 +107,7 @@ This will launch the web UI. Open your browser and go to [http://localhost:8501]
 ### 6. Review the LLM's Diagnosis
 - The LLM will analyze the current system state and return a detailed fault report.
 - You should see a diagnosis indicating **high system saturation** as the root cause, with recommendations for remediation.
+![f1_response](../ui/images/demo/f1_llmresponse.png)
 
 ---
 
@@ -141,8 +150,18 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
   - **Volume3:** 100 GB, with snapshot settings: max_snapshots = 2, frequency = 30 seconds
 
   *(If the UI allows, set these snapshot settings when creating the volumes. If not, edit the volume after creation to add snapshot settings.)*
-
+The detailed steps to apply settings to a volume are as follows:
+#### 1. Create the setting in the settings panel and click the create button to successfully create the setting
 ![f2_settings](../ui/images/demo/f2_settings.png)
+#### 2. Go to the volume panel and select the volume to which the settings has to be applied
+![f2_settings_1](../ui/images/demo/selectvolume.png)
+#### 3. Select which setting you want to apply to the volume, by clicking on one of the options from the dropdown
+![f2_settings_2](../ui/images/demo/selectsettingtoadd.png)
+#### 4.Click the 'add' button to add the setting to the volume
+![f2_settings_3](../ui/images/demo/clickadd.png)
+#### 5.Click on 'update' to sucessfully update the volume with the setting that you just added.The below response will be displayed:
+![f2_settings](../ui/images/demo/responseonupdate.png)
+
 #### c. Add Hosts
 - Add two hosts:
   - **Host1**
@@ -175,7 +194,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 ### 5. Simulate the Fault and Analyze with LLM
 - In the chat input of the UI, enter the following prompt:
   ```
-  Why is volume3 in System 5002 experiencing high latency?
+  Why is volume v1 in System 5002 experiencing high latency?
   ```
 - Submit the prompt.
 
@@ -184,6 +203,7 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 ### 6. Review the LLM's Diagnosis
 - The LLM will analyze the current system state and return a detailed fault report.
 - You should see a diagnosis indicating **high system capacity (snapshot overload)** as the root cause, with recommendations for remediation.
+![f2_response](../ui/images/demo/f2_llmresponse.png)
 
 ---
 
@@ -267,25 +287,32 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 ---
 
 ### 5. Simulate the Fault and Analyze with LLM
-- In the chat input of the UI, enter the following prompt:
+- 1) In the chat input of the UI, enter the following prompt for the source system:
   ```
-  Why is volume1 in System 5003 experiencing high latency?
+  Why is volume v1 in System 5003 experiencing high latency?
   ```
 - Submit the prompt.
-
+- 2) In the chat input of the UI, enter the following prompt for the target system:
+  ```
+  Give a fault report for system 5004.
+  ```
+- Submit the prompt.
 ---
 
 ### 6. Review the LLM's Diagnosis
 - The LLM will analyze the current system state and return a detailed fault report.
-- You should see a diagnosis indicating **replication link issues** as the root cause, with recommendations for remediation.
-
+- You should see a diagnosis indicating **replication link issues** as the root cause for the source system, with recommendations for remediation.
+![f3_response](../ui/images/demo/f3_llmresponse.png)
+- Since the issue is not propagated to the target system, a query to the agent for the target system will indicate 'no fault'.
+![f3_response2](../ui/images/demo/f3_targetresponse.png)
 ---
+**You have now simulated the third fault scenario using only the UI!**
 
 ## Troubleshooting
 - If you do not see the expected options in the UI, ensure you are using the latest version of the code and that all dependencies are installed.
 - If the systems, volumes, replication, or fault injection options do not appear, refresh the UI or restart the Streamlit app.
-
-**You have now simulated the third fault scenario using only the UI!**
+-If you try to diagnose a fault for a system that does not exist, you will get an error message from them ui as follows:
+![system not found error](../ui/images/demo/systemnotfoundllm.png)
 
 ---
 
