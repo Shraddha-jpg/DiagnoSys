@@ -1,6 +1,6 @@
 <h1 align="center">Overview of Agentic Workflow</h1>
 
-The `agent.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
+The `agent.py` script implements DiagnoSys Bot, a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
 
 ## LLM Details
 ### Model Used
@@ -33,7 +33,7 @@ llm = ChatOpenAI(
 - **Grok API**: Facilitates access to the LLaMA model via xAI's infrastructure.
 - **Python Libraries**: `json`, `os`, `re`, `importlib.util`, `typing`, `streamlit`.
 
-## LLM Role in the Application
+## LLM Role in the DiagnoSys Bot
 The LLM is used in two primary stages of the workflow:
 1. **Fault Analysis (in `analyze_fault` agent)**:
    - Analyzes system data, metrics, and RAG (Retrieval-Augmented Generation) context to identify faults.
@@ -400,7 +400,7 @@ class AgentState(TypedDict):
 
 4. **Supported Latency Issue Types**
 
-The AI agent currently supports diagnosis of three primary latency fault categories in storage systems:
+DiagnoSys Bot currently supports diagnosis of three primary latency fault categories in storage systems:
 
   1. **High Capacity Usage Issues**
     - Detects when elevated storage capacity consumption leads to degraded I/O latency.

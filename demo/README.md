@@ -3,7 +3,7 @@
 This guide walks you through simulating three real-world storage system fault scenarios from scratch using the codebase in this repository. You will:
 - Set up storage systems, volumes, hosts, snapshots, and replication links
 - Inject faults (saturation, snapshot overload, replication delay)
-- Use the LLM-powered agent to analyze and diagnose each scenario
+- Use DiagnoSys Bot to analyze and diagnose each scenario
 
 ---
 
@@ -318,5 +318,5 @@ Open your browser and go to [http://localhost:8501](http://localhost:8501).
 
 ## Notes
 - You can adjust parameters (sizes, workload, snapshot frequency, fault duration) to create custom scenarios.
-- For each scenario, the LLM agent will analyze the current state and provide a root cause report and recommendations.
+- For each scenario, DiagnoSys Bot will analyze the current state and provide a root cause report and recommendations.
 - For more details, see testcases.txt and the main README. 
