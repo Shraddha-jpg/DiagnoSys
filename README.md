@@ -1,8 +1,8 @@
-<h1 align="center">Storage System AI Diagnostic Agent</h1>
+<h1 align="center">DiagnoSys Bot : Storage System AI Diagnostic Agent</h1>
 
 ![Overview of project](ui/overview.png)
 
-An AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
+DiagnoSys Bot is an AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
 
 ## Features
 
@@ -14,7 +14,7 @@ An AI-powered diagnostic assistant that helps users identify, analyze, and troub
 
 ## Supported Latency Issue Types
 
-The AI agent currently supports diagnosis of three primary latency fault categories in storage systems:
+DiagnoSys Bot agent currently supports diagnosis of three primary latency fault categories in storage systems:
 
 1. **High Capacity Usage Issues**
    - Detects when elevated storage capacity consumption leads to degraded I/O latency.
@@ -41,8 +41,8 @@ The AI agent currently supports diagnosis of three primary latency fault categor
 1. Clone this repository:
 
    ```bash
-   git clone <repository-url>
-   cd storage-ai-agent
+   git clone https://github.com/Dhanush-M555/DiagnoSys
+   cd DiagnoSys
    ```
 
 2. Install Python dependencies:
