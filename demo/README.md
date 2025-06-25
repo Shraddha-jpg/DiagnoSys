@@ -11,7 +11,7 @@ This guide walks you through simulating three real-world storage system fault sc
 - Python 3.8+
 - All dependencies installed (`pip install -r requirements.txt`)
 - (Optional) Streamlit for the LLM UI: `pip install streamlit`
-- Set the Groq api key in your `agent.py`. A new api key can be created at [Groq_api_key_creation][https://console.groq.com/keys]:
+- Set the Groq api key in your `agent.py`. A new api key can be created at https://console.groq.com/keys:
 
 ```
 # === CONFIG ===
