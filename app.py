@@ -3,7 +3,7 @@ import uuid
 import socket
 from datetime import datetime, timedelta
 import flask
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_file, render_template
 from models import System, Volume, Host, Settings
 from storage import StorageManager
 from logger import Logger
@@ -14,7 +14,7 @@ import random
 import sys
 import argparse
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='ui/templates')
 
 print("Flask app is starting...")
 
@@ -698,8 +698,7 @@ print(f"ENABLE_UI is set to {ENABLE_UI}")
 if ENABLE_UI:
     @app.route('/ui')
     def serve_ui():
-        print(f"ENABLE_UI is set to {ENABLE_UI}")
-        return send_from_directory('ui', 'index.html')
+        return render_template('index.html')
     
 @app.route("/export-volume", methods=["POST"])
 def export_volume():
