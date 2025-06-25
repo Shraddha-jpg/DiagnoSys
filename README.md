@@ -1,4 +1,4 @@
-# Storage System AI Diagnostic Agent
+<h1 align="center">Storage System AI Diagnostic Agent</h1>
 
 An AI-powered diagnostic assistant that helps users identify, analyze, and troubleshoot latency issues in storage systems by intelligently inspecting metrics, logs, and configurations. Designed for modern, complex storage infrastructures, this agent integrates large language models (LLMs), retrieval-augmented generation (RAG), and interactive visualizations to accelerate issue resolution.
 
@@ -120,21 +120,19 @@ Streamlit-powered interactive dashboards visualize:
 
 For detailed instructions, examples, and component overviews, refer to:
 
-- Project Overview : [README.md] (https://github.com/Dhanush-M555/HPE_GenAI/final-doc/README.md)
+- [Project Overview](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/README.md)
 
-- Fault Simulation Guide : README_FAULT_SIMULATION.md
+- [Fault Simulation Guide and Demo](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/demo/README.md)
 
-- Data File Breakdown: utils/UTILS.md
+- [Overview of Core Utilities and Storage File Formats used](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/utils/README.md)
 
-- UI Details & Screenshots: ui/UI.md
+- [UI Details & Walkthrough Screenshots](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/ui/README.md)
 
-- RAG Prompt Structure & Data Models: problem_spaces/PROBLEM_SPACES.md
+- [Overview of Problem Spaces](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/problem_spaces/README.md)
 
-- Test Case Configurations: testcases.txt
+- [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/demo/testcases.txt)
 
-- Storage File Formats Explained: utils/UTILS.md
-
-- LLM Workflow Insights: workflow/llm_explanation.md
+- [LLM Agentic Workflow Insights](https://github.com/Dhanush-M555/HPE_GenAI/final-doc/workflow/README.md)
 
 For step-by-step fault reproduction, UI screenshots, and simulated environment setup, consult the relevant guides above.
 
