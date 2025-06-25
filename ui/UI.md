@@ -1,4 +1,31 @@
-# Storage System Simulator
+<h1 align="center">Storage System Simulator UI </h1>
+
+This document provides a comprehensive overview of the user interface (UI) assets, structure, and the detailed Storage System Simulator experience.
+
+---
+
+## UI Structure and Usage
+
+This directory contains all user interface assets for the project, including HTML templates and static files.
+
+### Structure
+
+- `templates/` — Jinja2/Flask HTML templates (e.g., `index.html`).
+- (Optional) `static/` — CSS, JS, and image assets for the UI.
+
+### Usage
+
+- Templates are rendered by Flask via `render_template`.
+- To add a new page, create a new HTML file in `templates/` and add a corresponding route in `app.py`.
+
+### Guidelines
+
+- Keep templates modular and DRY (use template inheritance).
+- Place all static assets in a `static/` subfolder for clarity.
+- Document any custom JS or CSS in comments.
+
+---
+<h1 align="center">Overview of the Storage System Simulator </h1>
 
 The **Storage System Simulator** is an intuitive and interactive web-based tool designed to simulate the working of storage systems efficiently. 
 
@@ -175,119 +202,4 @@ The **Replication Link Fault Injection** tool enables simulation of network faul
 
 - **Performance Testing:** Evaluate how the system behaves under increased latency during replication.
 
----
-
-## Storage System File Structure: Configuration, Metrics, and Logs
-
-When you create a new storage system, the simulator generates several files grouped into three main categories: **Configuration Files**, **Metric Files**, and **Log Files**. Each category serves a distinct purpose in managing, monitoring, and troubleshooting your simulated environment.
-
----
-
-### 1. Configuration Files
-
-**Purpose:**  
-Configuration files store the core definitions and relationships of your storage system, including systems, volumes, hosts, and settings. These files represent the current state and structure of your environment.
-
-**Files Included:**
-- `system.json` – Contains metadata for each storage system (ID, name, max throughput, max capacity).
-- `volume.json` – Lists all volumes, their attributes, and associations with systems and hosts.
-- `host.json` – Details all hosts, including their application type and protocol.
-- `settings.json` – Stores snapshot and replication policy definitions.
-- `snapshots.json` – Tracks all snapshots created for volumes.
-- `global_systems.json` - Keep record of all storage systems.
-
-**How to View:**  
-The NavBar lets you toggle between and view JSON data for all the objects(i.e, System, Volume, Settings and Host) as shown below. 
-
-![Storage System Simulator UI NavBar](images/navbar.png)
-
-
-**Example:**  
-![Configuration Files](images/Config_files.png)
-
----
-
-### 2. Metric Files
-
-**Purpose:**  
-Metric files capture real-time and historical performance data, enabling you to monitor system health, resource usage, and workload characteristics.
-
-**Files Included:**
-- `io_metrics.json` – Logs I/O statistics for each volume (IOPS, latency, throughput).
-- `system_metrics.json` – Records system-wide metrics like throughput used, capacity used, CPU usage, and latency.
-- `replication_metrics.json` – Tracks metrics related to replication activities.
-
-**Example** 
-
-![Metric Files](images/Metric_files.png)
----
-
-### 3. Log Files
-
-**Purpose:**  
-Log files provide a chronological record of system events, operations, and cleanup activities. They are essential for debugging, auditing, and understanding system behavior over time.
-
-**Files Included:**
-- `logs_<system_name>.txt` – Contains global and local logs for the system, including I/O events and system actions.
-- `snapshot_log.txt` – Specifically logs snapshot cleanup operations and related capacity changes.
-
-**Example:**  
-
-![Log Files](images/log_files.png)
-
----
-
-By understanding these file categories and their roles, you can better manage, monitor, and troubleshoot your simulated storage systems.  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--- 

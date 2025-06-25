@@ -1,6 +1,6 @@
-# Problem Spaces
+<h1 align="center">Problem Spaces </h1>
 
-This directory contains all problem space definitions, prompts, and tools for the LLM-powered analysis.
+This directory contains all problem space definitions, prompts, and tools for the LLM-powered analysis including support for various storage system architectures.
 
 ## What is a Problem Space?
 
