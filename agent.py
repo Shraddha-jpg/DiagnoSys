@@ -14,6 +14,9 @@ from langgraph.graph import StateGraph, END
 from pydantic import BaseModel
 from typing import TypedDict
 import streamlit as st
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 class SystemNotFoundError(Exception):
     pass
@@ -156,7 +159,7 @@ def extract_relevant_data(state: AgentState) -> AgentState:
 
     # Check for system data directory
    
-    data_dir = f"data_instance_{port}"
+    data_dir = f"data/data_instance_{port}"
     if not os.path.exists(data_dir):
         raise SystemNotFoundError(f"System not found for port {port}")
 
