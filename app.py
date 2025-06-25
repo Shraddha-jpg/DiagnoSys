@@ -28,7 +28,7 @@ args, unknown = parser.parse_known_args()
 
 # Use the port from argument if provided, else fallback
 
-def find_available_port(start=5000, max_instances=50):
+def find_available_port(start=5001, max_instances=50):
     for port in range(start, start + max_instances):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             if s.connect_ex(("localhost", port)) != 0:
