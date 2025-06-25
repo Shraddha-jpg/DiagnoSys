@@ -1,7 +1,6 @@
-# Documentation: LLM Usage in `llm.py` RCA Chatbot
+<h1 align="center">Overview of Agentic Workflow</h1>
 
-## Overview
-The `llm.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
+The `agent.py` script implements a Root Cause Analysis (RCA) chatbot for analyzing faults in storage systems. It leverages a Large Language Model (LLM) to process system data, perform fault analysis, and generate human-readable reports. The LLM is integrated with LangChain for prompt engineering, LangGraph for agent orchestration, and Streamlit for the user interface. This document details the LLM's role, the specific model used, its configuration, and the workflow.
 
 ## LLM Details
 ### Model Used
@@ -45,7 +44,7 @@ The LLM is used in two primary stages of the workflow:
 
 The LLM processes structured prompts to ensure consistent outputs, leveraging its natural language understanding to interpret system data and generate actionable insights.
 
-## Workflow
+## Agentic Workflow
 ![LLM Workflow diagram](images/workflow_diagram.png)
 The RCA chatbot processes user queries (e.g., "Why is volume1 in system 5002 experiencing high latency?") through a LangGraph-orchestrated workflow involving four agents: `extract_relevant_data`, `analyze_fault`, `tool_agent`, and `format_response`. The LLM is invoked in the `analyze_fault` and `format_response` agents. Below is a detailed explanation of the workflow.
 
@@ -303,7 +302,7 @@ class AgentState(TypedDict):
   4. Verify that the system's configuration is optimized for the current workload and make adjustments to prevent bottlenecks.
   5. Check for any resource-intensive processes or applications that may be contributing to the high saturation and optimize or limit their resource usage.
   ```
-![example response](images/exampleresponse1.png)
+![example response](images/example_response_1.png)
 
 ### 4. Streamlit UI Output
 - **Query Processing**:

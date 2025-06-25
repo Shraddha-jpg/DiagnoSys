@@ -107,19 +107,19 @@ Streamlit-powered interactive dashboards visualize:
 
 For detailed instructions, examples, and component overviews, refer to:
 
-- [Project Overview](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/README.md)
+- [Project Overview](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/README.md)
 
-- [Fault Simulation Guide and Demo](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/demo/README.md)
+- [Fault Simulation Guide and Demo](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/demo/README.md)
 
-- [Overview of Core Utilities and Storage File Formats used](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/utils/README.md)
+- [Overview of Core Utilities and Storage File Formats used](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/utils/README.md)
 
-- [UI Details & Walkthrough Screenshots](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/ui/README.md)
+- [UI Details & Walkthrough Screenshots](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/ui/README.md)
 
-- [Overview of Problem Spaces](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/problem_spaces/README.md)
+- [Overview of Problem Spaces](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/problem_spaces/README.md)
 
-- [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/demo/testcases.txt)
+- [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/demo/testcases.txt)
 
-- [LLM Agentic Workflow Insights](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/workflow/README.md)
+- [LLM Agentic Workflow Insights](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/workflow/README.md)
 
 For step-by-step fault reproduction, UI screenshots, and simulated environment setup, consult the relevant guides above.
 

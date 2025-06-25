@@ -23,7 +23,7 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 
 This guide shows you how to simulate storage system faults using **only the web UI** (Streamlit app).Follow the steps mentioned below:
 
-Note: The testcases simulated below are mentioned in [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/tree/final-doc/demo/testcases.txt)
+Note: The testcases simulated below are mentioned in [Test Case Configurations](https://github.com/Dhanush-M555/HPE_GenAI/tree/main/demo/testcases.txt)
 
 ---
 
