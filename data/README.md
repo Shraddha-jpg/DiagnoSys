@@ -11,7 +11,7 @@ This folder contains all runtime and generated data for the project.
 ## Guidelines
 
 - Do not manually edit files in this folder.
-- Clean up old data using the `utils/clear.py` utility if needed.
+- Clean up old data using the `clear.py` utility if needed.
 - Back up important data before running destructive operations.
 
 ## Example
