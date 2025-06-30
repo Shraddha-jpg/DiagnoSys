@@ -381,6 +381,113 @@ class AgentState(TypedDict):
 - **System Not Found Handling**: Short-circuits workflow for missing systems.
 - **Formatted Chat History**: Preserves report formatting using `st.code`.
 - **Debug Mode**: Provides detailed logs for troubleshooting.
+- **Externalized RCA for Other Systems**: The RCA chatbot's architecture is designed to be modular, allowing the LLM to perform Root Cause Analysis for diverse systems (beyond storage systems) without modifying the core `llm.py` script or the Llama-3.3-70B-Versatile LLM. This is achieved by:
+  - **Modifying `config.json`**: The `problem_space` key in `config.json` (e.g., `"problem_space": "storage_system"`) defines the domain. To analyze a new system, such as a networking or database system, update or add a new problem space:
+    ```json
+    {
+      "problem_space": "network_system"
+    }
+    ```
+    Alternatively, support multiple problem spaces by extending `config.json`:
+    ```json
+    {
+      "problem_spaces": {
+        "storage_system": "problem_spaces/storage_system",
+        "network_system": "problem_spaces/network_system",
+        "database_system": "problem_spaces/database_system"
+      },
+      "active_problem_space": "network_system"
+    }
+    ```
+    - The script would need a minor adjustment to read `config["active_problem_space"]` or dynamically select based on query context, but this keeps the LLM unchanged.
+    - Create a corresponding directory (e.g., `problem_spaces/network_system/`) with required files.
+  - **Creating Problem Space Directory**: For each new problem space, set up a directory mirroring `problem_spaces/storage_system/`:
+    - **Directory Structure**:
+      ```
+      problem_spaces/network_system/
+      ├── data_model.json
+      ├── tools.json
+      ├── rag.txt
+      ├── analyze_prompt.txt
+      ├── format_prompt.txt
+      ├── tools/
+      │   └── packet_loss_analyzer.py
+      ```
+    - **Required Files**:
+      - `data_model.json`: Defines the fault analysis structure for the new domain, e.g.:
+        ```json
+        {
+          "fault_analysis_structure": "{\"fault_type\": \"No fault\", \"details\": {\"packet_loss\": 0, \"latency_ms\": 0}}"
+        }
+        ```
+        This ensures the LLM outputs JSON tailored to network faults (e.g., packet loss, latency).
+      - `tools.json`: Configures domain-specific tools, e.g.:
+        ```json
+        [
+          {
+            "name": "packet_loss_analyzer",
+            "file": "packet_loss_analyzer.py",
+            "function": "run",
+            "parameters": ["fault_analysis", "network_data"],
+            "required": ["network_data"]
+          }
+        ]
+        ```
+      - `rag.txt`: Contains domain-specific knowledge for RAG, e.g., common network fault patterns or diagnostic procedures.
+      - `analyze_prompt.txt`: Customizes LLM instructions for fault analysis, e.g.:
+        ```
+        Analyze network faults in the {PROBLEM_SPACE} domain. Given the query and network data, identify issues like packet loss or high latency. Return a JSON object with a tool_call to invoke the packet_loss_analyzer, adhering to the fault_analysis_structure.
+        ```
+        The `{PROBLEM_SPACE}` placeholder is replaced with `network_system`, ensuring domain-specific analysis without altering the LLM.
+      - `format_prompt.txt`: Defines the report format for the new domain, e.g.:
+        ```
+        Format the JSON fault analysis into a concise, human-readable report for {system_name} (Port: {port}) in the {PROBLEM_SPACE} domain. Include fault type, key metrics (e.g., packet loss, latency), and recommended actions.
+        ```
+        This ensures reports are tailored to network faults, e.g.:
+        ```
+        Fault Report for Router_5002 (Port: 5002)
+        Fault Type: High packet loss
+        Key Metrics:
+        - Packet Loss: 5%
+        - Latency: 100ms
+        Recommended Actions:
+        - Check routing table configurations.
+        - Investigate upstream provider issues.
+        ```
+      - `tools/packet_loss_analyzer.py`: Implements domain-specific logic, e.g.:
+        ```python
+        def run(fault_analysis, network_data):
+            packet_loss = network_data.get("packet_loss", 0)
+            fault_analysis["details"]["packet_loss"] = packet_loss
+            if packet_loss > 2:
+                fault_analysis["fault_type"] = "High packet loss"
+            return fault_analysis
+        ```
+    - **Data Instances**: Create directories like `data_instance_5002/` with domain-specific data (e.g., `network_metrics.json`, `routing_table.json`), mirroring the storage system’s structure (`system.json`, `snapshots.json`).
+  - **Externalizing Tools**: Tools are loaded dynamically via `tools.json` and `importlib.util`, allowing new tools (e.g., `packet_loss_analyzer.py`) to be added without modifying `llm.py`. The LLM’s `analyze_fault` agent generates `tool_call` JSON based on `analyze_prompt.txt`, ensuring compatibility with new tools.
+  - **Preserving the LLM**: The Llama-3.3-70B-Versatile model remains unchanged, as it processes generic text inputs and outputs based on prompts. The domain-specific logic is encapsulated in the problem space files and tools, enabling the LLM to generalize across systems (e.g., storage, network, database) without retraining or modification.
+  - **Workflow Adaptation**: The LangGraph workflow (`extract_relevant_data`, `analyze_fault`, `tool_agent`, `format_response`) is agnostic to the problem space. The `extract_relevant_data` agent loads data from `data_instance_{port}`, while `analyze_fault` and `format_response` use domain-specific prompts and tools, ensuring seamless RCA for new systems.
+  - **Example for Database System**:
+    - Update `config.json`: `"problem_space": "database_system"`
+    - Create `problem_spaces/database_system/` with:
+      - `data_model.json`: `{"fault_analysis_structure": "{\"fault_type\": \"No fault\", \"details\": {\"query_time_ms\": 0}}"}`
+      - `tools.json`: Tool for query performance analysis.
+      - `rag.txt`: Database performance optimization knowledge.
+      - `analyze_prompt.txt`: Instructions for analyzing query bottlenecks.
+      - `format_prompt.txt`: Report format for database faults.
+      - `tools/query_analyzer.py`: Analyzes query execution plans.
+    - Create `data_instance_5002/` with `query_metrics.json`.
+    - Query: “Why is system 5002 experiencing slow queries?”
+    - Output: Report detailing query time, index usage, and optimization steps.
+  - **Benefits**:
+    - **Modularity**: New systems are supported by adding problem space directories and data, without code changes.
+    - **Scalability**: Multiple problem spaces can coexist, enabling RCA across diverse domains.
+    - **Reusability**: The LLM’s general-purpose capabilities are leveraged for any system with structured data and prompts.
+  - **Note**:
+    - Requires consistent file structures across problem spaces.
+    - `extract_relevant_data` assumes `data_instance_{port}`; custom data sources may need minor script tweaks.
+    - Tool outputs must align with `fault_analysis_structure` for seamless integration.
+
 
 ## Setup Instructions
 1. **Install Dependencies**:
