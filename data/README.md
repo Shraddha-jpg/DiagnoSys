@@ -31,4 +31,16 @@ data/
     ├── system_metrics.json
     ├── system.json
     └── volume.json
-``` 
+```
+
+
+## Instance Details
+
+Each `data_instance_{port}` folder represents a specific simulated system configured to test different high latency scenarios:
+
+- `data_instance_5001/` — Simulates high latency resulting from elevated system saturation levels.
+- `data_instance_5002/` — Simulates high latency caused by excessive system capacity utilization.
+- `data_instance_5003/` and `data_instance_5004/` — Represent the source and target systems for simulating high latency due to replication link issues.
+
+These controlled setups facilitate targeted testing of system performance under various latency conditions.
+
