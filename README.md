@@ -27,6 +27,14 @@ DiagnoSys Bot agent currently supports diagnosis of three primary latency fault 
 3. **Replication Link Issues**
    - Diagnoses problems in replication networks that might cause delayed writes, asynchronous lag, or inconsistent states.
    - Tracks replication link health, transfer rates, and lag metrics.
+  
+### Tech Stacks used
+- Python and Flask(Backend)
+- HTML,CSS,JavaScript(Frontend)
+- LLM(LLaMA-3.3-70B-Versatile)- using Groq’s LLM API
+- RAG and FAISS Vector Store-for retrieving and storing rca chunks from the rca document(rag.txt)
+- Langchain for agentic workflow
+- Streamlit for RCA chatbot for the storage system
 
 ## Setup Instructions
 
