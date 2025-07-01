@@ -5,7 +5,7 @@ The `agent.py` script implements DiagnoSys Bot, a Root Cause Analysis (RCA) chat
 ## LLM Details
 ### Model Used
 - **Model**: LLaMA-3.3-70B-Versatile
-- **Provider**: Grok (via xAI's API)
+- **Provider**: Groq
 - **API Endpoint**: `https://api.groq.com/openai/v1`
 - **API Key**: `` (hardcoded in the script)
 - **Characteristics**:
