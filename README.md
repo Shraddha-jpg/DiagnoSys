@@ -27,7 +27,17 @@ DiagnoSys Bot agent currently supports diagnosis of three primary latency fault 
 3. **Replication Link Issues**
    - Diagnoses problems in replication networks that might cause delayed writes, asynchronous lag, or inconsistent states.
    - Tracks replication link health, transfer rates, and lag metrics.
-  
+
+## Assumed values:
+1. **Latency thresholds**
+  - Default: 1ms (≤70% usage)
+  - 2ms (70-80% usage)
+  - 3ms (80-90% usage) #This is the fault threshold
+  - 4ms (90-100% usage)
+  - 5ms (>100% usage)
+
+2. **Fixed IOPS at 2000 for all volumes**
+
 ## Tech Stacks used
 - Python and Flask(Backend)
 - HTML,CSS,JavaScript(Frontend)
