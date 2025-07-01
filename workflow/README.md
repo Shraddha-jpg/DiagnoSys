@@ -11,7 +11,7 @@ The `agent.py` script implements DiagnoSys Bot, a Root Cause Analysis (RCA) chat
 - **Characteristics**:
   - A 70-billion parameter model optimized for versatility in natural language tasks.
   - Fine-tuned for JSON-structured outputs and conversational tasks.
-  - Accessed via Grok's API, which wraps the model in an OpenAI-compatible interface.
+  - Accessed via Groq's API, which wraps the model in an OpenAI-compatible interface.
 
 ### Configuration
 The LLM is initialized using LangChain's `ChatOpenAI` class with the following settings:
@@ -24,13 +24,13 @@ llm = ChatOpenAI(
 )
 ```
 - **Model Name**: `llama-3.3-70b-versatile`
-- **API Base**: Points to Grok's API endpoint for compatibility with OpenAI's API structure.
-- **API Key**: Authenticates requests to the Grok API.
+- **API Base**: Points to Groq's API endpoint for compatibility with OpenAI's API structure.
+- **API Key**: Authenticates requests to the Groq API.
 - **Temperature**: Set to `0` for deterministic, precise outputs (crucial for JSON parsing and structured fault analysis).
 
 ### Dependencies
 - **LangChain**: Provides `ChatOpenAI`, `SystemMessage`, and `HumanMessage` for prompt construction and LLM invocation.
-- **Grok API**: Facilitates access to the LLaMA model via xAI's infrastructure.
+- **Groq API**: Facilitates access to the LLaMA model via xAI's infrastructure.
 - **Python Libraries**: `json`, `os`, `re`, `importlib.util`, `typing`, `streamlit`.
 
 ## LLM Role in the DiagnoSys Bot
