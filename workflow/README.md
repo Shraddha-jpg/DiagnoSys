@@ -30,7 +30,7 @@ llm = ChatOpenAI(
 
 ### Dependencies
 - **LangChain**: Provides `ChatOpenAI`, `SystemMessage`, and `HumanMessage` for prompt construction and LLM invocation.
-- **Groq API**: Facilitates access to the LLaMA model via xAI's infrastructure.
+- **Groq API**: Facilitates access to the LLaMA model 
 - **Python Libraries**: `json`, `os`, `re`, `importlib.util`, `typing`, `streamlit`.
 
 ## LLM Role in the DiagnoSys Bot
