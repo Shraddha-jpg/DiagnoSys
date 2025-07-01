@@ -28,7 +28,7 @@ DiagnoSys Bot agent currently supports diagnosis of three primary latency fault 
    - Diagnoses problems in replication networks that might cause delayed writes, asynchronous lag, or inconsistent states.
    - Tracks replication link health, transfer rates, and lag metrics.
   
-### Tech Stacks used
+## Tech Stacks used
 - Python and Flask(Backend)
 - HTML,CSS,JavaScript(Frontend)
 - LLM(LLaMA-3.3-70B-Versatile)- using Groq’s LLM API
