@@ -10,7 +10,7 @@ This directory contains all user interface assets for the project, including HTM
 
 ### Structure
 
-- `templates/` — Jinja2/Flask HTML templates (e.g., `index.html`).
+- `templates/` — Flask HTML templates (e.g., `index.html`).
 - (Optional) `static/` — CSS, JS, and image assets for the UI.
 
 ### Usage
